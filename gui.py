@@ -9,7 +9,6 @@ import customtkinter as ctk
 import requests
 from customtkinter import filedialog
 from dotenv import find_dotenv, load_dotenv
-from selenium.common import WebDriverException
 
 import utils
 import widgets
