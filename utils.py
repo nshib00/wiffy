@@ -1,13 +1,9 @@
-import base64
-import getpass
+import json
 import logging
 import re
 from os import getenv
 from pathlib import Path
-from random import randint
-from time import sleep
 
-import keyring
 from dotenv import find_dotenv, load_dotenv, set_key
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -16,20 +12,6 @@ from selenium.webdriver.chrome.service import Service
 
 envfile = find_dotenv()
 load_dotenv(envfile)
-
-
-def randsleep(from_: float, to: float) -> None:
-    """
-    Stops the program execution on random time (from 'from_' to 'to' seconds).
-    """
-
-    rand1 = randint(int(from_), int(to))
-    if rand1 == int(to):
-        rand2 = randint(0, int(to))
-    else:
-        rand2 = randint(0, 9)
-    sleep_time = rand1 + rand2 / 10
-    sleep(sleep_time)
 
 
 def format_to_win_path_string(string: str) -> str:
@@ -42,6 +24,10 @@ def format_to_win_path_string(string: str) -> str:
     return string
 
 
+def format_url_string(url_string: str) -> str:
+    return url_string.replace('/', '-').replace('(', '').replace(')', '').replace('\'', '-')
+
+
 def create_driver() -> webdriver.chrome.webdriver.WebDriver:
     driver_options = Options()
     driver_options.add_extension("D:\projects\wiffy\chromedriver\extensions\AdBlocker-Ultimate.crx")
@@ -51,34 +37,49 @@ def create_driver() -> webdriver.chrome.webdriver.WebDriver:
     return driver
 
 
-def save_vk_login(login: str) -> None:
-    set_key(envfile, "VK_LOGIN", login)
+def save_vk_user_id(user_id: str):
+    set_key(envfile, 'VK_USER_ID', user_id)
 
 
-def get_email_regex() -> re.Pattern:
-    return re.compile(r"([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+)")
+def get_user_id_regex() -> re.Pattern:
+    return re.compile(r"^[a-z0-9][a-z0-9._][a-z._][a-z0-9._]{2,29}")
 
 
-def get_phone_number_regex() -> re.Pattern:
-    return re.compile(r"^((8|\+\d{1,3})[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$")
+def check_long_underscores_in_user_id(user_id: str) -> None:
+    underscores_in_row = 0
+    for symbol in user_id:
+        if symbol == '_':
+            underscores_in_row += 1
+        else:
+            underscores_in_row = 0
+        if underscores_in_row == 2:
+            raise ValueError('VK user ID cannot contain double (or more long) underscore.')
 
 
-def string_is_email(string: str) -> bool:
-    return (
-        "@" in string or re.search(r"\.\s+", string) is not None or re.search(r"[A-Za-z]+", string) is not None
-    ) and not string.isdigit()
+def are_symbols_after_dots_correct_in_user_id(user_id: str) -> bool:
+    symbols_after_dot = 0
+    for index, symbol in enumerate(user_id):
+        if symbol == '.':
+            for index2, symbol2 in enumerate(user_id[index+1:]):
+                if symbol2 == '.':
+                    symbols_after_dot = 0
+                else:
+                    if index2 == index + 1:
+                        if symbol2.isalpha():
+                            symbols_after_dot += 1
+                        else:
+                            return False
+                    else:
+                        symbols_after_dot += 1
+            if symbols_after_dot < 4:
+                return False
+    return True
 
 
-def set_pwd(pwd_string) -> None:
-    keyring.set_password(
-        service_name="wiffy_pwd",
-        username=getpass.getuser(),
-        password=base64.b64decode(pwd_string).decode("utf-8"),
-    )
-
-
-def get_pwd() -> str:
-    return keyring.get_password(service_name="wiffy_pwd", username=getpass.getuser())
+def user_id_is_correct(user_id: str) -> bool:
+    check_long_underscores_in_user_id(user_id)
+    are_dots_correct = are_symbols_after_dots_correct_in_user_id(user_id)
+    return not user_id.startswith('_') and not user_id.endswith('_') and are_dots_correct
 
 
 def get_logger(logger_filename: str, filemode="a") -> logging.Logger:
@@ -96,8 +97,10 @@ def get_logger(logger_filename: str, filemode="a") -> logging.Logger:
 
 def count_saved_tracks() -> int:
     tracks_count = 0
-    for _ in open("songs_data.txt", encoding="utf-8"):
-        tracks_count += 1
+    with open("songs_data.json", encoding="utf-8") as file:
+        songs_data_from_file = json.load(file)
+    for song_page in songs_data_from_file:
+        tracks_count += len(song_page.get('songs'))
     return tracks_count
 
 

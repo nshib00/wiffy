@@ -1,5 +1,7 @@
 venv
 .env
 logs
-source.html
-songs_data.txt
+profiles
+info.json
+__pycache__
+songs_data.json

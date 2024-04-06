@@ -1,7 +1,8 @@
 import base64
 import os
 
-from parser import download_song, get_saved_songs_info, make_download_path, make_songs_data_dict, parse
+from parser import download_song, make_show_songs_text, make_download_path, parse, make_song_objects_list, \
+    find_available_kissvk_server
 from threading import Thread
 from typing import Callable
 
@@ -9,7 +10,7 @@ import customtkinter as ctk
 import requests
 from customtkinter import filedialog
 from dotenv import find_dotenv, load_dotenv
-from selenium.common import WebDriverException
+from profilehooks import profile
 
 import utils
 import widgets
@@ -84,32 +85,22 @@ def draw_login_forms(frame: ctk.CTkFrame, info_label: ctk.CTkLabel, app: App, lo
     try:
         clear_info_label_if_not_empty(info_label)
         login_button.destroy()
-        login_form = ctk.CTkEntry(
+        user_id_form = ctk.CTkEntry(
             frame,
             width=300,
             height=20,
             font=("Arial", 16),
-            placeholder_text="VK phone number or email",
+            placeholder_text="Your VK shortname or user ID",
         )
-        pwd_form = ctk.CTkEntry(
-            frame,
-            width=300,
-            height=20,
-            font=("Arial", 16),
-            show="·",
-            placeholder_text="VK password",
-        )
-        forms = {"login": login_form, "pwd": pwd_form}
         save_button = ctk.CTkButton(
             frame,
             text="Save and continue",
             font=("Arial", 20),
             height=45,
-            command=lambda: draw_main_ui(frame=frame, app=app, info_label=info_label, forms=forms),
+            command=lambda: draw_main_ui(frame=frame, app=app, info_label=info_label, user_id_form=user_id_form),
         )
-        login_form.grid(row=0, column=0, columnspan=2, padx=45, pady=10, sticky="nesw")
-        pwd_form.grid(row=1, column=0, columnspan=2, padx=45, pady=10, sticky="nesw")
-        save_button.grid(row=2, column=0, columnspan=2, padx=45, pady=40, sticky="nesw")
+        user_id_form.grid(row=0, column=0, columnspan=2, padx=45, pady=10, sticky="nesw")
+        save_button.grid(row=1, column=0, columnspan=2, padx=45, pady=40, sticky="nesw")
     except Exception as e:
         info_label.configure(text=e.args[0], text_color="red")
 
@@ -168,13 +159,13 @@ def open_show_songs_menu(app: App, info_label: ctk.CTkLabel, content_frame: ctk.
     content_frame.destroy()
     content_frame = ctk.CTkFrame(app, corner_radius=0)
     songs_frame = ctk.CTkScrollableFrame(content_frame, width=360, height=130, label_anchor="w")
-    saved_songs_str, saved_songs_count = get_saved_songs_info()
+    songs_str, songs_count = make_show_songs_text()
     content_frame.grid(row=2, column=0)
-    songs_label = ctk.CTkLabel(songs_frame, text=saved_songs_str)
-    if saved_songs_count:
+    songs_label = ctk.CTkLabel(songs_frame, text=songs_str)
+    if songs_count:
         songs_frame.grid(row=0, column=0, padx=10, pady=5)
         songs_label.pack()
-        info_label.configure(text=f"Songs found: {saved_songs_count}.", text_color="green")
+        info_label.configure(text=f"Songs found: {songs_count}.", text_color="green")
         draw_back_button(
             width=30,
             height=80,
@@ -355,13 +346,20 @@ def grid_progressbar_elements(pb_frame: ctk.CTkFrame, pb: ctk.CTkProgressBar, pb
     pb_label.grid(row=0, column=1, padx=5, pady=5)
 
 
+@profile(stdout=False, filename='profiles/download.prof')
 def download_songs_with_progressbar(
-    pb: ctk.CTkProgressBar, pb_label: ctk.CTkLabel, songs_count: int | None = None
+    pb: ctk.CTkProgressBar, pb_label: ctk.CTkLabel, info_label: ctk.CTkLabel, songs_count: int | None = None
 ) -> None:
-    songs_data = make_songs_data_dict(count=songs_count)
-    for index, song in enumerate(songs_data, start=1):
+    song_objects = make_song_objects_list(count=songs_count)
+    kissvk_server_code = 114
+    for index, song in enumerate(song_objects, start=1):
+        if index == 1:
+            info_label.configure(text="Searching for an available server to download...", text_color="#c0c0c0")
+            kissvk_server_code = find_available_kissvk_server(song_for_request=song)
+            print(f'Server to download: {kissvk_server_code}')
+            info_label.configure(text="Downloading tracks...", text_color="#c0c0c0")
         download_path = make_download_path()
-        download_song(song, download_path)
+        download_song(song, song_index=index-1, download_path=download_path, server_code=kissvk_server_code)
         pb.set(value=index / songs_count)
         pb_label.configure(text=f"{index}/{songs_count}")
 
@@ -372,7 +370,6 @@ def start_tracks_downloading(
     download_frame: ctk.CTkFrame,
     spinbox: widgets.Spinbox,
 ) -> None:
-    info_label.configure(text="Downloading tracks...", text_color="#c0c0c0")
     choosed_tracks_count = spinbox.get()
     saved_tracks_count = utils.count_saved_tracks()
     if choosed_tracks_count is None:
@@ -385,15 +382,25 @@ def start_tracks_downloading(
     try:
         if int(choosed_tracks_count) > saved_tracks_count:
             raise ValueError(f"Incorrect value. Tracks count should be between 1 and {saved_tracks_count}.")
+        if int(choosed_tracks_count) == 0:
+            raise ValueError(f"There are no tracks to download. Click \"Back\" button,\nchoose count of tracks and try again.")
         if choosed_tracks_count is None:
-            download_songs_with_progressbar(pb=progressbar, pb_label=pb_label)
+            download_songs_with_progressbar(pb=progressbar, pb_label=pb_label, info_label=info_label)
         else:
-            download_songs_with_progressbar(pb=progressbar, pb_label=pb_label, songs_count=int(choosed_tracks_count))
+            download_songs_with_progressbar(
+                pb=progressbar, pb_label=pb_label, info_label=info_label, songs_count=int(choosed_tracks_count)
+            )
+    except requests.ConnectionError as e:
+        info_label.configure(
+            text="No internet connection. Please connect to the internet\nand try to download again.",
+            text_color="red",
+        )
+        logger.error(f"{e.__class__.__name__}: {e}")
     except TracksNotFoundError as e:
         info_label.configure(
             text="There are no saved tracks. Before downloading,\nclick on the “Find tracks from VK”"
             "button so that the program saves\ninformation about tracks from your VK page.",
-            text_color="red",
+            text_color="#ffaa00",
         )
         logger.error(f"{e.__class__.__name__}: {e}")
     except ValueError as e:
@@ -410,7 +417,7 @@ def draw_main_ui(
     frame: ctk.CTkFrame,
     app: App,
     info_label: ctk.CTkLabel,
-    forms: dict | None = None,
+    user_id_form: dict | None = None,
     clear_frame: bool = False,
 ) -> None:
     clear_info_label_if_not_empty(info_label)
@@ -418,26 +425,18 @@ def draw_main_ui(
         frame.destroy()
         frame = create_content_frame(app)
     try:
-        if forms is not None:
-            if forms.get("login") is not None and forms.get("pwd") is not None:
-                login = forms["login"].get()
-                utils.set_pwd(base64.b64encode(forms.get("pwd").get().encode("utf-8")))
-                pwd = utils.get_pwd()
-                email_regex = utils.get_email_regex()
-                phone_number_regex = utils.get_phone_number_regex()
-
-                if not login or not pwd:
-                    raise ValueError("Login and/or password are not specified. Please, try again.")
-                if utils.string_is_email(string=login):
-                    if not email_regex.match(login):
-                        raise ValueError("Email is incorrect. Please, try again.")
-                else:
-                    if not phone_number_regex.match(login):
-                        raise ValueError("Phone number is incorrect. Please, try again.")
-                    if len(forms["pwd"].get()) < 8:
-                        raise ValueError("VK password cannot contain less than 8 characters.\nPlease, try again.")
-                utils.save_vk_login(login)
-                frame.destroy()
+        if user_id_form is not None:
+            vk_user_id = user_id_form.get()
+            user_id_regex = utils.get_user_id_regex()
+            if not vk_user_id:
+                raise ValueError("VK user ID is not specified. Please, try again.")
+            if not user_id_regex.match(vk_user_id) or len(vk_user_id) > 32:
+                raise ValueError("Entered value is not VK user ID. Please, try again.")
+            if not utils.user_id_is_correct(vk_user_id):
+                raise ValueError("Entered VK user ID is incorrect. Please, try again.")
+            print(utils.user_id_is_correct(vk_user_id))
+            utils.save_vk_user_id(vk_user_id)
+            frame.destroy()
         frame = create_content_frame(app)
         tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
         find_tracks_button = ctk.CTkButton(
@@ -472,7 +471,7 @@ def draw_ui(app: App) -> None:
     info_label.place(relx=0.5, rely=0.5, anchor="center")
     draw_wiffy_label(frame=top_frame)
     draw_relogin_button(app=app, top_frame=top_frame, content_frame=content_frame, info_label=info_label)
-    if os.getenv("VK_LOGIN") is None or utils.get_pwd() is None:
+    if os.getenv("VK_USER_ID") is None:
         draw_login_button(frame=content_frame, info_label=info_label, app=app)
     else:
         draw_main_ui(frame=content_frame, info_label=info_label, app=app)

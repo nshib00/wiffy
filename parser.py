@@ -1,163 +1,174 @@
+import json
 from os import getenv
 from pathlib import Path
 
 import requests
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
-from selenium.common.exceptions import ElementNotInteractableException, TimeoutException
-from selenium.webdriver import Keys
-from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from requests import Response
+from profilehooks import profile
 
 import utils
-from exceptions import TracksNotFoundError
+from songs_classes import Song, SongsHint
 
 
 load_dotenv()
 
 logger = utils.get_logger("parser.log", filemode="w")
 
-
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "user-agent": UserAgent().random,
 }
 
-
-def save_html_in_file(pages_html: list[str]) -> None:
-    soup = BeautifulSoup(parser="lxml")
-    soup.append(soup.new_tag("html"))
-    soup.html.append(soup.new_tag("body"))
-    for page in pages_html:
-        soup.body.extend(BeautifulSoup(page, "lxml").body)
-    with open("source.html", "w", encoding="utf-8") as file:
-        file.write(str(soup.prettify()))
+songs_hint = SongsHint(value='')
 
 
-def get_source_page(driver: WebDriver) -> None:
-    pages_html = []
-    page_num = 1
-    next_page_btn_xpath = "/html/body/div[6]/div/div[3]/div[3]/p[2]/button[2]"
-    wait = WebDriverWait(driver, timeout=30)
+def build_request_url(url: str, params: dict[str, str]) -> str:
+    request_url = url + '?'
+    for par_name, par_value in params.items():
+        request_url += f'{par_name}={par_value}&'
+    return request_url[:-1]
+
+
+def get_vk_user_id(user_shortname: str) -> int:
+    user_id_request = requests.get(
+        url=build_request_url(
+            'https://api.vk.com/method/users.get',
+            params={
+                'user_ids': user_shortname,
+                'access_token': getenv('VK_ACCESS_TOKEN'),
+                'v': '5.191',
+            }
+        ),
+        headers=headers
+    )
+    return user_id_request.json().get('response')[0].get('id')
+
+
+def get_songs_data_from_page(user_id: int, page: int) -> json:
+    songs_request = requests.get(
+        url=build_request_url(
+            f'https://i129.kissvk.com/api/song/user/get_songs/{user_id}',
+            params={
+                'origin': 'kissvk.com',
+                'page': page,
+                'songs_hint': songs_hint.value,
+            }
+        ),
+        headers=headers
+    )
+    return songs_request.json()
+
+
+def save_songs_data(songs_data: list[dict]) -> None:
+    logger.info("Saving tracks data...")
+    with open("songs_data.json", "w", encoding="utf-8") as file:
+        json.dump(songs_data, file, ensure_ascii=False, indent=4)
+    logger.info("Songs data saved successfully.")
+
+
+def get_songs_data() -> list[dict]:
+    vk_user_id = get_vk_user_id('nshib')
+    page_num = 0
+    all_songs_data = []
     while True:
-        try:
-            next_page_btn = wait.until(
-                EC.element_to_be_clickable(
-                    (By.XPATH, next_page_btn_xpath)
-                )
-            )
-            next_page_btn.click()
-            pages_html.append(driver.page_source)
-            page_num += 1
-        except TimeoutException:
-            popup = wait.until(
-                EC.visibility_of_element_located(
-                    (By.ID, 'shareModal')
-                )
-            )
-            close_btn = popup.find_element(By.CLASS_NAME, 'close')
-            close_btn.click()
-            continue
-        except Exception as e:
-            logger.error(f'Exception occured: {e.__class__.__name__}: {e}')
+        songs_data_from_page = get_songs_data_from_page(user_id=vk_user_id, page=page_num)
+        if page_num == 0:
+            songs_hint.value = songs_data_from_page.get('hint')
+        if not songs_data_from_page.get('songs'):
             break
-        finally:
-            save_html_in_file(pages_html)
+        all_songs_data.append(songs_data_from_page)
+        page_num += 1
+    return all_songs_data
 
 
-def get_song_cards() -> list:
-    logger.info("Getting track elements from the web page...")
-    with open("source.html", encoding="utf-8") as file:
-        src = file.read()
-    soup = BeautifulSoup(src, "lxml")
-    trs = [tr for tr in soup.find_all("tr") if tr.attrs.get("ng-repeat") is not None]
-    return trs
+def make_songs_request_url_to_server(server_index: int) -> str:
+    return f'https://i{server_index}.kissvk.com/api/song/download/get/11'
 
 
-def save_songs_data(song_cards: list) -> None:
-    tracks_count = 0
-    logger.info("Gettings tracks data...")
-    with open("songs_data.txt", "w", encoding="utf-8") as file:
-        for i, song_card in enumerate(song_cards, start=1):
-            if song_card.find("div", "kvk-title") is None:
-                continue
+def get_url_params_dict(song: Song) -> dict:
+    return {
+            'origin': 'kissvk.com',
+            'url': song.url,
+            'artist': utils.format_url_string(song.artist),
+            'title': utils.format_url_string(song.title),
+            'index': song.index,
+            'user_id': 358241846,
+            'ui_version': 230706080202,
+            'future_urls': 'sid%3A%2F%2F296739633_456241388_e61e5e061e392fbc5d_4c78d33e65d88457f1%2Csid%3A%2F%2F296739633_456241387_15b8916550d4b54e72_086cf6e8327f85bcdb%2Csid%3A%2F%2F296739633_456241386_312c8f04a4189488b4_e20cd05dcb08f4342c%2Csid%3A%2F%2F296739633_456241385_7f50b272c578492a55_477f181c356b535d7c%2Csid%3A%2F%2F296739633_456241384_462e8acdab6e4ea9e6_b45ffdc93a0b1dceaf%2Csid%3A%2F%2F296739633_456241383_1f8ce51410f449f59a_819865da91ec517a63%2Csid%3A%2F%2F296739633_456241382_05a1ec3f4a6044b18c_856e279a8543a3a5b1%2Csid%3A%2F%2F296739633_456241381_a26b0f9dd3a698067d_1661b5b5e8e1015477%2Csid%3A%2F%2F296739633_456241380_1fe8d2dff835b3a086_d1255f21d201acfdbe'
+        }
+
+
+def get_search_response(session: requests.Session, song: Song, server_index: int) -> Response:
+    api_method_url = make_songs_request_url_to_server(server_index)
+    song_url = build_request_url(
+        url=f'{api_method_url}/{utils.format_url_string(song.full_title)}--kissvk.com.mp3',
+        params=get_url_params_dict(song)
+    )
+    request_headers = {}
+    response = session.get(song_url, headers=request_headers)
+    return response
+
+
+# def check_cached_server(song_for_request: Song):
+#     with open('info.json') as file:
+#         cached_kissvk_server_index = json.load()['cached_kissvk_server']
+#     response = get_search_response(song=song_for_request, server_index=cached_kissvk_server_index)
+#     if response.ok and response.content:
+#         logger.info(f'Checking server {server_index}... Success.')
+#         return server_index
+
+@profile(stdout=False, filename='profiles/server_search.prof')
+def find_available_kissvk_server(song_for_request: Song) -> int:
+    with requests.Session() as session:
+        for server_index in range(114, 130):
+            response = get_search_response(session=session, song=song_for_request, server_index=server_index)
+            if response.ok and response.content:
+                logger.info(f'Checking server {server_index}... Success.')
+                return server_index
             else:
-                tracks_count += 1
-                song_title = song_card.find("div", "kvk-title").text.strip()
-                song_artist = song_card.find("div", "kvk-artist").text.strip()
-                song_ref = song_card.find("a", "btn-outline-primary").attrs.get("href")
-                if song_ref is None:
-                    song_ref = ""
-                else:
-                    song_ref = "https:" + song_ref
-                song_data = f"{song_artist} - {song_title} | {song_ref}\n"
-                file.write(song_data)
-    logger.info(f"Tracks found: {tracks_count}")
+                logger.info(f'Checking server {server_index}... Failed. {response.status_code=}')
+    return 0
 
 
-def kissvk_auth(driver: WebDriver) -> None:
-    wait = WebDriverWait(driver, timeout=10)
-    auth_btn = wait.until(
-        EC.presence_of_element_located((By.CLASS_NAME, "btn.btn-success.btn-lg"))
+def request_song_download(song: Song, server_code: int) -> Response | None:
+    api_method_url = make_songs_request_url_to_server(server_index=server_code)
+    song_url = build_request_url(
+        url=f'{api_method_url}/{song.full_title}--kissvk.com.mp3',
+        params=get_url_params_dict(song)
     )
-    auth_btn.click()
-    login_input = wait.until(
-        EC.presence_of_element_located((By.NAME, 'login'))
-    )
-    login_input.clear()
-    login_input.send_keys(getenv("VK_LOGIN"))
-    login_input.send_keys(Keys.ENTER)
-    pwd_input = wait.until(
-        EC.presence_of_element_located((By.NAME, 'password'))
-    )
-    pwd_input.clear()
-    pwd_input.send_keys(str(utils.get_pwd()))
-    pwd_input.send_keys(Keys.ENTER)
-
-
-def close_popup_window(driver: WebDriver) -> None:
-    main_window, popup_window = driver.window_handles
-    driver.switch_to.window(popup_window)
-    driver.close()
-    driver.switch_to.window(main_window)
+    response = requests.get(song_url)
+    logger.info(f'server={server_code} -> {response.content=}')
+    if response.content is not None:
+        return response
 
 
 def parse() -> None:
-    driver = utils.create_driver()
-    try:
-        driver.get("https://kissvk.com/")
-        close_popup_window(driver)
-        kissvk_auth(driver)
-    except ElementNotInteractableException as e:
-        close_btn = driver.find_element(By.CLASS_NAME, 'close')
-        close_btn.click()
-        logger.warning(e)
-    except Exception as e:
-        logger.error(f"{e.__class__.__name__}: {e}")
-    finally:
-        get_source_page(driver)
-        song_cards = get_song_cards()
-        if song_cards:
-            save_songs_data(song_cards)
-        driver.close()
-        driver.quit()
+    songs_data = get_songs_data()
+    save_songs_data(songs_data)
 
 
-def make_songs_data_dict(count: int | None = None) -> list[dict]:
-    with open("songs_data.txt", encoding="utf-8") as file:
-        filestrs = file.readlines()
-    if count is None:
-        needed_songs_count = len(filestrs)
-    else:
-        needed_songs_count = count
-    songs_data = [
-        {"title": song_str.split(" | ")[0], "url": song_str.split(" | ")[1]}
-        for song_str in filestrs[:needed_songs_count]
-    ]
+def get_saved_songs_data() -> list[Song]:
+    songs_data = []
+    with open("songs_data.json", encoding="utf-8") as file:
+        songs_data_from_file = json.load(file)
+    for song_page in songs_data_from_file:
+        for song in song_page.get('songs'):
+            songs_data.append(
+                Song(
+                    artist=song['artist'],
+                    title=song['title'],
+                    url=song['url'],
+                    index=song['index']
+                )
+            )
     return songs_data
+
+
+def make_song_objects_list(count: int) -> list[Song]:
+    songs_data = get_saved_songs_data()
+    return songs_data[:count]
 
 
 def make_download_path() -> Path:
@@ -170,41 +181,27 @@ def make_download_path() -> Path:
     return download_path
 
 
-def download_song(song: dict, download_path: Path) -> None:
-    filename = utils.format_to_win_path_string(string=song["title"])
+def download_song(song: Song, song_index: int, download_path: Path, server_code: int) -> None:
+    filename = utils.format_to_win_path_string(string=song.full_title)
     song_path = download_path / f"{filename}.mp3"
 
     if not song_path.is_file():
-        response = requests.get(song["url"], headers=headers)
-        with open(song_path, "wb") as audio:
-            audio.write(response.content)
-            logger.info(f'Track "{song["title"]}" downloaded successfully.')
+        song_response = request_song_download(song=song, server_code=server_code)
+        if not song_response.content:
+            logger.warning(f'Track "{song.full_title}" found but download failed.')
+        else:
+            with open(song_path, "wb") as audio:
+                audio.write(song_response.content)
+                logger.info(f'Track "{song.full_title}" downloaded successfully.')
     else:
-        logger.info(f'Track "{song["title"]}" already exists.')
+        logger.info(f'Track "{song.full_title}" already exists.')
 
 
-@utils.calls_counter
-def download_songs(songs_count: int | None = None) -> None:
-    download_songs.downloaded_songs_count = 0
-    logger.info(f"Downloading tracks: {songs_count}.")
-    if songs_count is None:
-        songs_data = make_songs_data_dict()
-    else:
-        songs_data = make_songs_data_dict(count=songs_count)
-    if not songs_data:
-        raise TracksNotFoundError
-    download_path = make_download_path()
-    for index, song in enumerate(songs_data, start=1):
-        download_song(song, download_path)
-        download_songs.downloaded_songs_count += 1
-    logger.info("Tracks downloading ended.")
-
-
-def get_saved_songs_info() -> tuple[str, int]:
+def make_show_songs_text() -> tuple[str, int]:
     songs_str = ""
-    with open("songs_data.txt", encoding="utf-8") as file:
-        songs_info_list = file.readlines()
-    for index, songstr in enumerate(songs_info_list, start=1):
-        song_title = songstr.split(" | ")[0]
-        songs_str += f"{index}) {song_title}\n"
-    return songs_str, len(songs_info_list)
+    songs_count = 0
+    songs_data_list = get_saved_songs_data()
+    for song in songs_data_list:
+        songs_count += 1
+        songs_str += f"{songs_count}) {song.full_title}\n"
+    return songs_str, songs_count

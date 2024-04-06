@@ -59,14 +59,16 @@ class Spinbox(ctk.CTkFrame):
         self.all_tracks_button.grid(row=0, column=3, padx=5)
 
     def subtract_value(self) -> None:
-        self.value -= 1
-        self.value_entry.delete(0, "end")
-        self.value_entry.insert(0, self.value)
+        if self.value > 0:
+            self.value -= 1
+            self.value_entry.delete(0, "end")
+            self.value_entry.insert(0, self.value)
 
     def add_value(self) -> None:
-        self.value += 1
-        self.value_entry.delete(0, "end")
-        self.value_entry.insert(0, self.value)
+        if self.value < self.max_:
+            self.value += 1
+            self.value_entry.delete(0, "end")
+            self.value_entry.insert(0, self.value)
 
     def get(self) -> int | None:
         try:
@@ -75,8 +77,9 @@ class Spinbox(ctk.CTkFrame):
             return None
 
     def set_max_value(self) -> None:
+        self.value = self.max_
         self.value_entry.delete(0, "end")
-        self.value_entry.insert(0, self.max_)
+        self.value_entry.insert(0, self.value)
 
     def configure(
         self,
