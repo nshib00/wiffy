@@ -42,7 +42,7 @@ def save_vk_user_id(user_id: str):
 
 
 def get_user_id_regex() -> re.Pattern:
-    return re.compile(r"^[a-z0-9][a-z0-9._][a-z._][a-z0-9._]{2,29}")
+    return re.compile(r"^(?!\d{3,})[a-z0-9._]{2,29}")
 
 
 def check_long_underscores_in_user_id(user_id: str) -> None:

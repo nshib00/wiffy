@@ -434,7 +434,7 @@ def draw_main_ui(
                 raise ValueError("Entered value is not VK user ID. Please, try again.")
             if not utils.user_id_is_correct(vk_user_id):
                 raise ValueError("Entered VK user ID is incorrect. Please, try again.")
-            print(utils.user_id_is_correct(vk_user_id))
+            print(f'{utils.user_id_is_correct(vk_user_id)=}')
             utils.save_vk_user_id(vk_user_id)
             frame.destroy()
         frame = create_content_frame(app)
