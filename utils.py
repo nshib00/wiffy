@@ -3,19 +3,36 @@ import getpass
 import logging
 import re
 from os import getenv
-from pathlib import Path
 from random import randint
 from time import sleep
 
 import keyring
 from dotenv import find_dotenv, load_dotenv, set_key
+from get_chrome_driver import GetChromeDriver
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from pathlib import Path
 
 
 envfile = find_dotenv()
 load_dotenv(envfile)
+
+
+def get_logger(logger_filename: str, filemode="a") -> logging.Logger:
+    Path("logs").mkdir(exist_ok=True)
+    logger = logging.getLogger(logger_filename)
+    logger_format = "(%(name)s) %(asctime)s [%(levelname)s] function: %(funcName)s | %(message)s"
+    logging.basicConfig(
+        filename=f"logs/{logger_filename}",
+        level=logging.INFO,
+        format=logger_format,
+        filemode=filemode,
+    )
+    return logger
+
+
+logger = get_logger('utils.log')
 
 
 def randsleep(from_: float, to: float) -> None:
@@ -33,7 +50,7 @@ def randsleep(from_: float, to: float) -> None:
 
 
 def format_to_win_path_string(string: str) -> str:
-    for sym in "/:*?»<>|":
+    for sym in "/:*?»\"<>|!":
         if sym in string:
             string = string.replace(sym, "")
     filename_parts = string.split(".")
@@ -42,10 +59,41 @@ def format_to_win_path_string(string: str) -> str:
     return string
 
 
+def clear_folder(path: Path) -> None:
+    for sub in path.glob('*/**'):
+        if 'extensions' not in str(sub):
+            sub.rmdir() if sub.is_dir() else sub.unlink()
+
+
+def is_driver_need_to_update() -> bool:
+    getdriver_obj = GetChromeDriver()
+    stable_version_number: str = getdriver_obj.stable_version().split('.')[0]
+    downloaded_version_number: str = getenv('DRIVER_VERSION').split('.')[0]
+    return int(stable_version_number) != int(downloaded_version_number)
+
+
+def update_driver() -> None:
+    logger.info(f'Driver is need to be updated. Updating driver...')
+    getdriver_obj = GetChromeDriver()
+    driver_path_str = 'chromedriver'
+    chromedriver_path = Path(driver_path_str)
+    clear_folder(chromedriver_path)
+    getdriver_obj.download_stable_version(output_path=driver_path_str, extract=True)
+    save_driver_version_info(version_info=getdriver_obj.stable_version())
+    logger.info(f'Driver updated successfully to version {getdriver_obj.stable_version()}.')
+
+
+def save_driver_version_info(version_info: str) -> None:
+    set_key(envfile, 'DRIVER_VERSION', version_info)
+
+
 def create_driver() -> webdriver.chrome.webdriver.WebDriver:
     driver_options = Options()
-    driver_options.add_extension("D:\projects\wiffy\chromedriver\extensions\AdBlocker-Ultimate.crx")
-    driver_service = Service(executable_path="D:\projects\wiffy\chromedriver\chromedriver-win64\chromedriver.exe")
+    driver_options.add_extension("chromedriver/extensions/AdBlocker-Ultimate.crx")
+    driver_service = Service(executable_path="chromedriver/chromedriver.exe")
+    logger.info(f'{is_driver_need_to_update()=}')
+    if is_driver_need_to_update():
+        update_driver()
     driver = webdriver.Chrome(options=driver_options, service=driver_service)
     driver.maximize_window()
     return driver
@@ -79,19 +127,6 @@ def set_pwd(pwd_string) -> None:
 
 def get_pwd() -> str:
     return keyring.get_password(service_name="wiffy_pwd", username=getpass.getuser())
-
-
-def get_logger(logger_filename: str, filemode="a") -> logging.Logger:
-    Path("logs").mkdir(exist_ok=True)
-    logger = logging.getLogger(__name__)
-    logger_format = "(%(name)s) %(asctime)s [%(levelname)s] function: %(funcName)s | %(message)s"
-    logging.basicConfig(
-        filename=f"logs/{logger_filename}",
-        level=logging.INFO,
-        format=logger_format,
-        filemode=filemode,
-    )
-    return logger
 
 
 def count_saved_tracks() -> int:

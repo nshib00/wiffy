@@ -1,5 +1,8 @@
 import base64
 import os
+import re
+
+from selenium.common import SessionNotCreatedException
 
 from parser import download_song, get_saved_songs_info, make_download_path, make_songs_data_dict, parse
 from threading import Thread
@@ -9,7 +12,6 @@ import customtkinter as ctk
 import requests
 from customtkinter import filedialog
 from dotenv import find_dotenv, load_dotenv
-from selenium.common import WebDriverException
 
 import utils
 import widgets
@@ -212,6 +214,15 @@ def start_tracks_parsing(info_label: ctk.CTkLabel) -> None:
     except requests.ConnectionError as e:
         info_label.configure(
             text="No internet connection. To find tracks from VK,\nyou need to connect to internet and try again.",
+            text_color="red",
+        )
+        logger.error(f"{e.__class__.__name__}: {e}")
+    except SessionNotCreatedException as e:
+        current_driver_version = re.search(r'only supports Chrome version [\d.]+', str(e)).group(0).split(' ')[-1]
+        browser_version = re.search(r'Current browser version is [\d.]+', str(e)).group(0).split(' ')[-1]
+        utils.save_driver_version_info(version_info=browser_version)
+        info_label.configure(
+            text=f"Driver session error. Current driver version: {current_driver_version}.\nDriver needs to be updated to version {browser_version} to work correctly.",
             text_color="red",
         )
         logger.error(f"{e.__class__.__name__}: {e}")

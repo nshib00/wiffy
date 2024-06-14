@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
-from selenium.common.exceptions import ElementNotInteractableException, TimeoutException
+from selenium.common.exceptions import ElementNotInteractableException, TimeoutException, WebDriverException
 from selenium.webdriver import Keys
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
@@ -45,11 +45,16 @@ def get_source_page(driver: WebDriver) -> None:
     while True:
         try:
             next_page_btn = wait.until(
-                EC.element_to_be_clickable(
+                EC.visibility_of_element_located(
                     (By.XPATH, next_page_btn_xpath)
                 )
             )
-            next_page_btn.click()
+            print(f'{page_num=}: {next_page_btn.get_attribute("disabled")=}')
+            try:
+                next_page_btn.click()
+            except WebDriverException:
+                logger.info(f'Button is not clickable on page {page_num}.')
+                break
             pages_html.append(driver.page_source)
             page_num += 1
         except TimeoutException:
@@ -65,6 +70,7 @@ def get_source_page(driver: WebDriver) -> None:
             logger.error(f'Exception occured: {e.__class__.__name__}: {e}')
             break
         finally:
+            print(f'{page_num=}: {len(driver.page_source)=}')
             save_html_in_file(pages_html)
 
 
@@ -73,7 +79,7 @@ def get_song_cards() -> list:
     with open("source.html", encoding="utf-8") as file:
         src = file.read()
     soup = BeautifulSoup(src, "lxml")
-    trs = [tr for tr in soup.find_all("tr") if tr.attrs.get("ng-repeat") is not None]
+    trs = [tr for tr in soup.find_all("tr") if tr.attrs.get("ng-repeat") is not None] # ng-repeat: "song in songs | limitTo:13:0"
     return trs
 
 
@@ -171,14 +177,23 @@ def make_download_path() -> Path:
 
 
 def download_song(song: dict, download_path: Path) -> None:
+    retries_count = 3
     filename = utils.format_to_win_path_string(string=song["title"])
     song_path = download_path / f"{filename}.mp3"
 
-    if not song_path.is_file():
-        response = requests.get(song["url"], headers=headers)
-        with open(song_path, "wb") as audio:
-            audio.write(response.content)
-            logger.info(f'Track "{song["title"]}" downloaded successfully.')
+    ''' Скачиваем аудиофайл, если его нет в папке или если аудиофайл пустой. '''
+    if not song_path.is_file() or song_path.is_file() and song_path.stat().st_size == 0:
+        for retry in range(retries_count-1, -1, -1): # обратный отсчет ретраев от retries_count до 0
+            response = requests.get(song["url"], headers=headers)
+            with open(song_path, "wb") as audio:
+                audio.write(response.content)
+            if song_path.stat().st_size == 0:
+                continue
+            elif song_path.stat().st_size > 0:
+                logger.info(f'Track "{song["title"]}" downloaded successfully.')
+                break
+        else:
+            logger.info(f'Downloading track "{song["title"]}" failed. Retries made: {retries_count}.')
     else:
         logger.info(f'Track "{song["title"]}" already exists.')
 
