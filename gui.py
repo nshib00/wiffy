@@ -8,7 +8,9 @@ from utils.user_data import get_pwd, set_pwd, save_vk_login
 from utils.counters import count_saved_tracks
 from utils.paths import change_download_path, get_default_download_path, get_download_path
 from utils.validation import get_email_regex, get_phone_number_regex, string_is_email
-from wiffy_parser import download_song, get_saved_songs_info, make_download_path, make_songs_data_dict, parse
+from wiffy_parser.core import parse
+from wiffy_parser.download import download_song, make_download_path
+from wiffy_parser.songs_data import get_saved_songs_info, make_songs_data_dict
 from threading import Thread
 from typing import Callable
 

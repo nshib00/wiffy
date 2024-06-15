@@ -31,9 +31,3 @@ def make_download_path() -> Path:
     if not download_path.is_dir():
         download_path.mkdir(exist_ok=True, parents=True)
     return download_path
-
-
-def clear_folder(path: Path) -> None:
-    for sub in path.glob('*/**'):
-        if 'extensions' not in str(sub):
-            sub.rmdir() if sub.is_dir() else sub.unlink()
