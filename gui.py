@@ -2,9 +2,13 @@ import base64
 import os
 import re
 
-from selenium.common import SessionNotCreatedException
+from selenium.common import SessionNotCreatedException, WebDriverException
 
-from parser import download_song, get_saved_songs_info, make_download_path, make_songs_data_dict, parse
+from utils.user_data import get_pwd, set_pwd, save_vk_login
+from utils.counters import count_saved_tracks
+from utils.paths import change_download_path, get_default_download_path, get_download_path
+from utils.validation import get_email_regex, get_phone_number_regex, string_is_email
+from wiffy_parser import download_song, get_saved_songs_info, make_download_path, make_songs_data_dict, parse
 from threading import Thread
 from typing import Callable
 
@@ -13,12 +17,12 @@ import requests
 from customtkinter import filedialog
 from dotenv import find_dotenv, load_dotenv
 
-import utils
+from utils.logger import get_logger
 import widgets
 from exceptions import TracksNotFoundError
 
 
-logger = utils.get_logger("gui.log")
+logger = get_logger("gui.log")
 
 
 ctk.set_appearance_mode("dark")
@@ -217,22 +221,21 @@ def start_tracks_parsing(info_label: ctk.CTkLabel) -> None:
             text_color="red",
         )
         logger.error(f"{e.__class__.__name__}: {e}")
-    except SessionNotCreatedException as e:
+    except SessionNotCreatedException as e: # скорее всего, этот код уже не будет полезен и далее будет удален
         current_driver_version = re.search(r'only supports Chrome version [\d.]+', str(e)).group(0).split(' ')[-1]
         browser_version = re.search(r'Current browser version is [\d.]+', str(e)).group(0).split(' ')[-1]
-        utils.save_driver_version_info(version_info=browser_version)
         info_label.configure(
             text=f"Driver session error. Current driver version: {current_driver_version}.\nDriver needs to be updated to version {browser_version} to work correctly.",
             text_color="red",
         )
         logger.error(f"{e.__class__.__name__}: {e}")
-    # except WebDriverException as e:
-    #     info_label.configure(
-    #         text="Parser exception occured.\nProbably, the page didn't load "
-    #         "in time because of slow\ninternet connection.",
-    #         text_color="red",
-    #     )
-    #     logger.error(f"{e.__class__.__name__}: {e}")
+    except WebDriverException as e:
+        info_label.configure(
+            text="Parser exception occured.\nProbably, the page didn't load "
+            "in time because of slow\ninternet connection.",
+            text_color="red",
+        )
+        logger.error(f"{e.__class__.__name__}: {e}")
     except Exception as e:
         info_label.configure(text=f"Error occured: {e.__class__.__name__}.", text_color="red")
         logger.error(f"{e.__class__.__name__}: {e}")
@@ -255,7 +258,7 @@ def configure_dir_label(dir_label: ctk.CTkLabel, new_path: str | None = None) ->
             else:
                 dir_label.configure(text=new_path[:50] + "...")
         else:
-            dir_label.configure(text=utils.get_default_download_path())
+            dir_label.configure(text=get_default_download_path())
 
 
 def create_and_get_download_frame_widgets(download_frame: ctk.CTkFrame, download_path: str) -> dict:
@@ -294,7 +297,7 @@ def configure_download_frame_widgets(df_widgets: dict, thread: Thread, **spinbox
 def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: ctk.CTkLabel, **spinbox_kwargs) -> None:
     download_frame = ctk.CTkFrame(parent_frame, corner_radius=5)
 
-    download_path = utils.get_download_path() or utils.get_default_download_path()
+    download_path = get_download_path() or get_default_download_path()
     download_frame_widgets = create_and_get_download_frame_widgets(download_frame, download_path)
 
     download_tracks_thread = Thread(
@@ -324,7 +327,7 @@ def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: ctk.CT
     # content_frame.destroy()
     content_frame = create_content_frame(app)
 
-    tracks_count = utils.count_saved_tracks()
+    tracks_count = count_saved_tracks()
     default_tracks_count = 50 if tracks_count >= 50 else tracks_count
 
     draw_download_frame(
@@ -348,7 +351,7 @@ def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: ctk.CT
 
 def open_change_dir_menu(dir_label: ctk.CTkLabel) -> None:
     new_download_path = filedialog.askdirectory()
-    utils.change_download_path(new_download_path)
+    change_download_path(new_download_path)
     configure_dir_label(dir_label, new_path=new_download_path)
 
 
@@ -385,7 +388,7 @@ def start_tracks_downloading(
 ) -> None:
     info_label.configure(text="Downloading tracks...", text_color="#c0c0c0")
     choosed_tracks_count = spinbox.get()
-    saved_tracks_count = utils.count_saved_tracks()
+    saved_tracks_count = count_saved_tracks()
     if choosed_tracks_count is None:
         choosed_tracks_count = saved_tracks_count
     download_frame.grid_forget()
@@ -432,14 +435,14 @@ def draw_main_ui(
         if forms is not None:
             if forms.get("login") is not None and forms.get("pwd") is not None:
                 login = forms["login"].get()
-                utils.set_pwd(base64.b64encode(forms.get("pwd").get().encode("utf-8")))
-                pwd = utils.get_pwd()
-                email_regex = utils.get_email_regex()
-                phone_number_regex = utils.get_phone_number_regex()
+                set_pwd(base64.b64encode(forms.get("pwd").get().encode("utf-8")))
+                pwd = get_pwd()
+                email_regex = get_email_regex()
+                phone_number_regex = get_phone_number_regex()
 
                 if not login or not pwd:
                     raise ValueError("Login and/or password are not specified. Please, try again.")
-                if utils.string_is_email(string=login):
+                if string_is_email(string=login):
                     if not email_regex.match(login):
                         raise ValueError("Email is incorrect. Please, try again.")
                 else:
@@ -447,7 +450,7 @@ def draw_main_ui(
                         raise ValueError("Phone number is incorrect. Please, try again.")
                     if len(forms["pwd"].get()) < 8:
                         raise ValueError("VK password cannot contain less than 8 characters.\nPlease, try again.")
-                utils.save_vk_login(login)
+                save_vk_login(login)
                 frame.destroy()
         frame = create_content_frame(app)
         tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
@@ -483,7 +486,7 @@ def draw_ui(app: App) -> None:
     info_label.place(relx=0.5, rely=0.5, anchor="center")
     draw_wiffy_label(frame=top_frame)
     draw_relogin_button(app=app, top_frame=top_frame, content_frame=content_frame, info_label=info_label)
-    if os.getenv("VK_LOGIN") is None or utils.get_pwd() is None:
+    if os.getenv("VK_LOGIN") is None or get_pwd() is None:
         draw_login_button(frame=content_frame, info_label=info_label, app=app)
     else:
         draw_main_ui(frame=content_frame, info_label=info_label, app=app)

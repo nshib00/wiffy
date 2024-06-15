@@ -12,13 +12,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-import utils
 from exceptions import TracksNotFoundError
+
+
+from utils.counters import calls_counter
+from utils.formatting import format_to_win_path_string
+from utils.logger import get_logger
+from utils.driver import create_driver
+from utils.paths import make_download_path
+from utils.user_data import get_pwd
 
 
 load_dotenv()
 
-logger = utils.get_logger("parser.log", filemode="w")
+logger = get_logger("parser.log", filemode="w")
 
 
 headers = {
@@ -120,7 +127,7 @@ def kissvk_auth(driver: WebDriver) -> None:
         EC.presence_of_element_located((By.NAME, 'password'))
     )
     pwd_input.clear()
-    pwd_input.send_keys(str(utils.get_pwd()))
+    pwd_input.send_keys(str(get_pwd()))
     pwd_input.send_keys(Keys.ENTER)
 
 
@@ -132,7 +139,7 @@ def close_popup_window(driver: WebDriver) -> None:
 
 
 def parse() -> None:
-    driver = utils.create_driver()
+    driver = create_driver()
     try:
         driver.get("https://kissvk.com/")
         close_popup_window(driver)
@@ -166,19 +173,12 @@ def make_songs_data_dict(count: int | None = None) -> list[dict]:
     return songs_data
 
 
-def make_download_path() -> Path:
-    if getenv("DOWNLOAD_PATH") is not None:
-        download_path = Path(getenv("DOWNLOAD_PATH"))
-    else:
-        download_path = Path("~/Downloads/wiffy")
-    if not download_path.is_dir():
-        download_path.mkdir(exist_ok=True, parents=True)
-    return download_path
+
 
 
 def download_song(song: dict, download_path: Path) -> None:
     retries_count = 3
-    filename = utils.format_to_win_path_string(string=song["title"])
+    filename = format_to_win_path_string(string=song["title"])
     song_path = download_path / f"{filename}.mp3"
 
     ''' Скачиваем аудиофайл, если его нет в папке или если аудиофайл пустой. '''
@@ -198,7 +198,7 @@ def download_song(song: dict, download_path: Path) -> None:
         logger.info(f'Track "{song["title"]}" already exists.')
 
 
-@utils.calls_counter
+@calls_counter
 def download_songs(songs_count: int | None = None) -> None:
     download_songs.downloaded_songs_count = 0
     logger.info(f"Downloading tracks: {songs_count}.")
@@ -209,7 +209,7 @@ def download_songs(songs_count: int | None = None) -> None:
     if not songs_data:
         raise TracksNotFoundError
     download_path = make_download_path()
-    for index, song in enumerate(songs_data, start=1):
+    for song in songs_data:
         download_song(song, download_path)
         download_songs.downloaded_songs_count += 1
     logger.info("Tracks downloading ended.")
