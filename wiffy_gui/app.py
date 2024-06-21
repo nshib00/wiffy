@@ -8,4 +8,7 @@ class App(ctk.CTk):
         self.geometry("400x400")
         self.iconbitmap("images/icon-16.ico")
         self.resizable(False, False)
-    
+
+
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("green")

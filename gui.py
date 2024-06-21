@@ -1,47 +1,45 @@
 import base64
 import os
 
-from selenium.common import WebDriverException
-
 from utils.user_data import get_pwd, set_pwd, save_vk_login
 from utils.counters import count_saved_tracks
-from utils.paths import get_default_download_path, get_download_path
 from utils.validation import get_email_regex, get_phone_number_regex, string_is_email
 from wiffy_gui.app import App
-from wiffy_gui.items.buttons import BackButton
-from wiffy_gui.items.labels import WiffyTextLabel
-from wiffy_gui.layout.download_menu import configure_download_frame_widgets, grid_download_frame_widgets
-from wiffy_gui.layout.main_menu import create_content_frame, create_frames
+from wiffy_gui.items.buttons import BackButton, MainMenuButton
+from wiffy_gui.items.labels import WiffyTextLabel, draw_app_header
+from wiffy_gui.layout.download_menu import draw_download_frame
+from wiffy_gui.layout.main_menu import create_main_menu_buttons, create_content_frame, create_frames
 from wiffy_gui.layout.show_songs_menu import configure_ssm_grid
-from wiffy_parser.core import parse
-from wiffy_parser.download import download_song, make_download_path
-from wiffy_parser.songs_data import get_saved_songs_info, make_songs_data_dict
+from wiffy_gui.parsing import start_tracks_parsing
+from wiffy_parser.songs_data import get_saved_songs_info
 from wiffy_gui.config import app_settings
 from threading import Thread
 from typing import Callable
 
 import customtkinter as ctk
-import requests
 from dotenv import find_dotenv, load_dotenv
 
 from utils.logger import get_logger
-from wiffy_gui.items.custom import Spinbox
-from exceptions import TracksNotFoundError
 
 
-logger = get_logger("gui.log")
+logger = get_logger(__file__)
 
-
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("green")
 
 load_dotenv(find_dotenv())
 
 
-def draw_wiffy_label(frame: ctk.CTkFrame) -> None:
-    wiffy_label = WiffyTextLabel(frame, text="Wiffy", font=app_settings.base_font_header, text_color=app_settings.header_color)
-    wiffy_label.place(relx=0.5, rely=0.5, anchor="center")
-    frame.grid(row=0, column=0, sticky="nesw")
+def configure_main_menu_buttons(buttons: tuple[MainMenuButton], app: App, info_label: WiffyTextLabel,
+                                                                                    content_frame: ctk.CTkFrame) -> None:
+    tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
+    find_tracks_button, show_tracks_button, download_tracks_button = buttons
+
+    find_tracks_button.configure(command=tracks_parsing_thread.start)
+    show_tracks_button.configure(
+        command=lambda: open_show_songs_menu(app=app, content_frame=content_frame, info_label=info_label)
+    )
+    download_tracks_button.configure(
+        command=lambda: open_download_menu(app=app, content_frame=content_frame, info_label=info_label)
+    )
 
 
 def draw_login_button(frame: ctk.CTkFrame, info_label: WiffyTextLabel, app: App, clear_frame=False) -> None:
@@ -177,80 +175,6 @@ def open_show_songs_menu(app: App, info_label: WiffyTextLabel, content_frame: ct
     )
 
 
-def start_tracks_parsing(info_label: WiffyTextLabel) -> None:
-    info_label.clear()
-    info_label.configure(text="Getting data about tracks from VK page...")
-    try:
-        requests.get("https://kissvk.com")
-        parse()
-    except requests.ConnectionError as e:
-        info_label.configure(
-            text="No internet connection. To find tracks from VK,\nyou need to connect to internet and try again.",
-            text_color="red",
-        )
-        logger.error(f"{e.__class__.__name__}: {e}")
-    except WebDriverException as e:
-        info_label.configure(
-            text="Parser exception occured.\nProbably, the page didn't load "
-            "in time because of slow\ninternet connection.",
-            text_color="red",
-        )
-        logger.error(f"{e.__class__.__name__}: {e}")
-    except Exception as e:
-        info_label.configure(text=f"Error occured: {e.__class__.__name__}.", text_color="red")
-        logger.error(f"{e.__class__.__name__}: {e}")
-    else:
-        info_label.configure(
-            text='Tracks from VK found succesfully.\nYou can click the "Show found tracks" button to check it.',
-            text_color="green",
-        )
-
-
-def create_download_frame_widgets(download_frame: ctk.CTkFrame, download_path: str) -> dict:
-    tracks_info_label = WiffyTextLabel(download_frame, text="Tracks to download:")
-    spinbox = Spinbox(download_frame, width=120)
-    info_dir_label = WiffyTextLabel(download_frame, text="Current download folder:")
-    current_dir_label = WiffyTextLabel(download_frame, text=download_path)
-    change_dir_button = ctk.CTkButton(download_frame, text="Change", font=app_settings.base_font)
-    apply_button = ctk.CTkButton(download_frame, text="Apply and download", font=app_settings.base_font)
-    return {
-        "tracks_info_label": tracks_info_label,
-        "spinbox": spinbox,
-        "info_dir_label": info_dir_label,
-        "current_dir_label": current_dir_label,
-        "change_dir_button": change_dir_button,
-        "apply_button": apply_button,
-    }
-
-
-def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: WiffyTextLabel, **spinbox_kwargs) -> None:
-    download_frame = ctk.CTkFrame(parent_frame, corner_radius=5)
-
-    download_path = get_download_path() or get_default_download_path()
-    download_frame_widgets = create_download_frame_widgets(download_frame, download_path)
-
-    download_tracks_thread = Thread(
-        target=start_tracks_downloading,
-        args=(
-            info_label,
-            parent_frame,
-            download_frame,
-            download_frame_widgets["spinbox"],
-        ),
-    )
-    configure_download_frame_widgets(
-        df_widgets=download_frame_widgets,
-        thread=download_tracks_thread,
-        to=spinbox_kwargs["tracks_count"],
-        width=150,
-        default_value=spinbox_kwargs["default_tracks_count"],
-        max_=spinbox_kwargs["tracks_count"],
-    )
-
-    download_frame.grid(row=2, column=0, padx=10, pady=5, columnspan=2)
-    grid_download_frame_widgets(download_frame_widgets)
-
-
 def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: WiffyTextLabel) -> None:
     info_label.clear()
     content_frame = create_content_frame(app)
@@ -275,77 +199,6 @@ def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: WiffyT
         columnspan=2,
         command=lambda: draw_main_ui(info_label=info_label, app=app, clear_frame=True, frame=content_frame),
     )
-
-
-
-
-
-def create_progressbar_elements(pb_frame: ctk.CTkFrame, songs_count: int) -> tuple[ctk.CTkProgressBar, WiffyTextLabel]:
-    progressbar = ctk.CTkProgressBar(pb_frame, width=320, corner_radius=5)
-    pb_label = WiffyTextLabel(pb_frame, text=f"0/{songs_count}")
-    return progressbar, pb_label
-
-
-def grid_progressbar_elements(pb_frame: ctk.CTkFrame, pb: ctk.CTkProgressBar, pb_label: WiffyTextLabel) -> None:
-    pb_frame.grid(row=0, column=0, padx=10, pady=5, columnspan=2)  # grids on content frame
-
-    # grids on progressbar frame
-    pb.grid(row=0, column=0, padx=5, pady=5)
-    pb_label.grid(row=0, column=1, padx=5, pady=5)
-
-
-def download_songs_with_progressbar(
-    pb: ctk.CTkProgressBar, pb_label: WiffyTextLabel, songs_count: int | None = None
-) -> None:
-    songs_data = make_songs_data_dict(count=songs_count)
-    for index, song in enumerate(songs_data, start=1):
-        download_path = make_download_path()
-        download_song(song, download_path)
-        pb.set(value=index / songs_count)
-        pb_label.configure(text=f"{index}/{songs_count}")
-
-
-def start_tracks_downloading(
-    info_label: WiffyTextLabel,
-    content_frame: ctk.CTkFrame,
-    download_frame: ctk.CTkFrame,
-    spinbox: Spinbox,
-) -> None:
-    info_label.configure(text="Downloading tracks...", text_color="#c0c0c0")
-    choosed_tracks_count = spinbox.get()
-    saved_tracks_count = count_saved_tracks()
-    if choosed_tracks_count is None:
-        choosed_tracks_count = saved_tracks_count
-    download_frame.grid_forget()
-    progressbar_frame = ctk.CTkFrame(content_frame, width=360, height=50)
-    progressbar, pb_label = create_progressbar_elements(progressbar_frame, songs_count=int(choosed_tracks_count))
-    grid_progressbar_elements(pb_frame=progressbar_frame, pb=progressbar, pb_label=pb_label)
-    progressbar.set(0)
-    try:
-        if int(choosed_tracks_count) > saved_tracks_count:
-            if saved_tracks_count > 0:
-                raise ValueError(f"Incorrect value. Tracks count should be between 1 and {saved_tracks_count}.")
-            else:
-                raise ValueError(f"You have no tracks for download. Find tracks and then try again.")
-        if choosed_tracks_count is None:
-            download_songs_with_progressbar(pb=progressbar, pb_label=pb_label)
-        else:
-            download_songs_with_progressbar(pb=progressbar, pb_label=pb_label, songs_count=int(choosed_tracks_count))
-    except TracksNotFoundError as e:
-        info_label.configure(
-            text="There are no saved tracks. Before downloading,\nclick on the “Find tracks from VK”"
-            "button so that the program saves\ninformation about tracks from your VK page.",
-            text_color="red",
-        )
-        logger.error(f"{e.__class__.__name__}: {e}")
-    except ValueError as e:
-        info_label.configure(text=e.args[0], text_color="red")
-        logger.error(f"{e.__class__.__name__}: {e}")
-    except Exception as e:
-        info_label.configure(text=f"Error occured: {e.__class__.__name__}.", text_color="red")
-        logger.error(f"{e.__class__.__name__}: {e}")
-    else:
-        info_label.configure(text="Tracks downloaded successfully.", text_color="green")
 
 
 def draw_main_ui(
@@ -381,28 +234,8 @@ def draw_main_ui(
                 save_vk_login(login)
                 frame.destroy()
         frame = create_content_frame(app)
-        tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
-        find_tracks_button = ctk.CTkButton(
-            frame,
-            text="Find tracks from VK",
-            font=app_settings.base_font,
-            command=tracks_parsing_thread.start,
-        )
-        find_tracks_button.place(relx=0.5, rely=0.2, anchor="center", relwidth=0.75, relheight=0.2)
-        show_tracks_button = ctk.CTkButton(
-            frame,
-            text="Show found tracks",
-            font=app_settings.base_font,
-            command=lambda: open_show_songs_menu(app=app, content_frame=frame, info_label=info_label),
-        )
-        show_tracks_button.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.75, relheight=0.2)
-        download_tracks_button = ctk.CTkButton(
-            frame,
-            text="Download found tracks",
-            font=app_settings.base_font,
-            command=lambda: open_download_menu(app=app, content_frame=frame, info_label=info_label),
-        )
-        download_tracks_button.place(relx=0.5, rely=0.8, anchor="center", relwidth=0.75, relheight=0.2)
+        menu_buttons = create_main_menu_buttons(frame)
+        configure_main_menu_buttons(app=app, buttons=menu_buttons, info_label=info_label, content_frame=frame)
     except FileNotFoundError as e:
         info_label.configure(text='You have no saved tracks. Try to find tracks before.', text_color="red")
         logger.error(f"{e.__class__.__name__}: {e}")
@@ -415,7 +248,7 @@ def draw_ui(app: App) -> None:
     top_frame, info_text_frame, content_frame = create_frames(app)
     info_label = WiffyTextLabel(info_text_frame)
     info_label.place(relx=0.5, rely=0.5, anchor="center")
-    draw_wiffy_label(frame=top_frame)
+    draw_app_header(frame=top_frame)
     draw_relogin_button(app=app, top_frame=top_frame, content_frame=content_frame, info_label=info_label)
     if os.getenv("VK_LOGIN") is None or get_pwd() is None:
         draw_login_button(frame=content_frame, info_label=info_label, app=app)

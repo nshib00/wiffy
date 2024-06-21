@@ -13,3 +13,9 @@ class WiffyTextLabel(ctk.CTkLabel):
     def place_in_center(self) -> None:
         super().place(relx=0.5, rely=0.5, anchor="center")
 
+
+def draw_app_header(frame: ctk.CTkFrame) -> None:
+    wiffy_label = WiffyTextLabel(frame, text="Wiffy", font=app_settings.base_font_header, text_color=app_settings.header_color)
+    wiffy_label.place_in_center()
+    frame.grid(row=0, column=0, sticky="nesw")
+
