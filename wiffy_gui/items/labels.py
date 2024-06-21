@@ -1,7 +1,15 @@
 import customtkinter as ctk
+from wiffy_gui.config import app_settings
 
 
-def clear_info_label_if_not_empty(info_label: ctk.CTkLabel) -> None:
-    if info_label._text:
-        info_label.configure(text="", text_color="#c0c0c0")
-        
+class WiffyTextLabel(ctk.CTkLabel):
+    def __init__(self, master, text="", text_color=app_settings.text_color, **kwargs):
+        super().__init__(master=master, text=text, text_color=text_color, **kwargs)
+
+    def clear(self) -> None:
+        if self._text:
+            self.configure(text="", text_color=app_settings.text_color)
+
+    def place_in_center(self) -> None:
+        super().place(relx=0.5, rely=0.5, anchor="center")
+

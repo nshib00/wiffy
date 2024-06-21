@@ -8,13 +8,15 @@ from utils.counters import count_saved_tracks
 from utils.paths import get_default_download_path, get_download_path
 from utils.validation import get_email_regex, get_phone_number_regex, string_is_email
 from wiffy_gui.app import App
-from wiffy_gui.items.labels import clear_info_label_if_not_empty
+from wiffy_gui.items.buttons import BackButton
+from wiffy_gui.items.labels import WiffyTextLabel
 from wiffy_gui.layout.download_menu import configure_download_frame_widgets, grid_download_frame_widgets
 from wiffy_gui.layout.main_menu import create_content_frame, create_frames
 from wiffy_gui.layout.show_songs_menu import configure_ssm_grid
 from wiffy_parser.core import parse
 from wiffy_parser.download import download_song, make_download_path
 from wiffy_parser.songs_data import get_saved_songs_info, make_songs_data_dict
+from wiffy_gui.config import app_settings
 from threading import Thread
 from typing import Callable
 
@@ -23,7 +25,7 @@ import requests
 from dotenv import find_dotenv, load_dotenv
 
 from utils.logger import get_logger
-import widgets
+from wiffy_gui.items.custom import Spinbox
 from exceptions import TracksNotFoundError
 
 
@@ -37,41 +39,41 @@ load_dotenv(find_dotenv())
 
 
 def draw_wiffy_label(frame: ctk.CTkFrame) -> None:
-    wiffy_label = ctk.CTkLabel(frame, text="Wiffy", font=("Arial", 60), text_color="#fc6514")
+    wiffy_label = WiffyTextLabel(frame, text="Wiffy", font=app_settings.base_font_header, text_color=app_settings.header_color)
     wiffy_label.place(relx=0.5, rely=0.5, anchor="center")
     frame.grid(row=0, column=0, sticky="nesw")
 
 
-def draw_login_button(frame: ctk.CTkFrame, info_label: ctk.CTkLabel, app: App, clear_frame=False) -> None:
-    clear_info_label_if_not_empty(info_label)
+def draw_login_button(frame: ctk.CTkFrame, info_label: WiffyTextLabel, app: App, clear_frame=False) -> None:
+    info_label.clear()
     if clear_frame:
         frame.destroy()
         frame = create_content_frame(app)
     login_button = ctk.CTkButton(
         frame,
         text="Sign in",
-        font=("Arial", 20),
+        font=app_settings.base_font,
         command=lambda: draw_login_forms(frame=frame, info_label=info_label, app=app, login_button=login_button),
     )
     login_button.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.7, relheight=0.2)
 
 
-def draw_login_forms(frame: ctk.CTkFrame, info_label: ctk.CTkLabel, app: App, login_button: ctk.CTkButton) -> None:
+def draw_login_forms(frame: ctk.CTkFrame, info_label: WiffyTextLabel, app: App, login_button: ctk.CTkButton) -> None:
     try:
-        clear_info_label_if_not_empty(info_label)
+        info_label.clear()
         login_button.destroy()
         login_form = ctk.CTkEntry(
             frame,
             width=300,
             height=20,
-            font=("Arial", 16),
+            font=app_settings.base_font_small,
             placeholder_text="VK phone number or email",
         )
         pwd_form = ctk.CTkEntry(
             frame,
             width=300,
             height=20,
-            font=("Arial", 16),
+            font=app_settings.base_font_small,
             show="·",
             placeholder_text="VK password",
         )
@@ -79,7 +81,7 @@ def draw_login_forms(frame: ctk.CTkFrame, info_label: ctk.CTkLabel, app: App, lo
         save_button = ctk.CTkButton(
             frame,
             text="Save and continue",
-            font=("Arial", 20),
+            font=app_settings.base_font,
             height=45,
             command=lambda: draw_main_ui(frame=frame, app=app, info_label=info_label, forms=forms),
         )
@@ -94,13 +96,13 @@ def draw_relogin_button(
     app: App,
     top_frame: ctk.CTkFrame,
     content_frame: ctk.CTkFrame,
-    info_label: ctk.CTkLabel,
+    info_label: WiffyTextLabel,
 ) -> None:
-    clear_info_label_if_not_empty(info_label)
+    info_label.clear()
     relogin_button = ctk.CTkButton(
         top_frame,
         text="⭮",
-        font=("Arial", 35),
+        font=app_settings.base_font_big,
         command=lambda: draw_login_button(frame=content_frame, info_label=info_label, app=app, clear_frame=True),
     )
     relogin_button.place(relx=0.9, rely=0.25, anchor="center", relwidth=0.1, relheight=0.32)
@@ -119,12 +121,10 @@ def draw_back_button(
     columnspan: int = 1,
     **kwargs,
 ) -> None:
-    back_button = ctk.CTkButton(
+    back_button = BackButton(
         frame,
-        text="Back",
         width=width,
         height=height,
-        font=("Arial", 20),
         command=command,
         **kwargs,
     )
@@ -133,20 +133,19 @@ def draw_back_button(
         column=column,
         padx=padx,
         pady=pady,
-        sticky="nsew",
         rowspan=rowspan,
         columnspan=columnspan,
     )
 
 
-def open_show_songs_menu(app: App, info_label: ctk.CTkLabel, content_frame: ctk.CTkFrame) -> None:
-    clear_info_label_if_not_empty(info_label)
+def open_show_songs_menu(app: App, info_label: WiffyTextLabel, content_frame: ctk.CTkFrame) -> None:
+    info_label.clear()
     content_frame.destroy()
     content_frame = ctk.CTkFrame(app, corner_radius=0)
     songs_frame = ctk.CTkScrollableFrame(content_frame, width=360, height=130, label_anchor="w")
     saved_songs_str, saved_songs_count = get_saved_songs_info()
     content_frame.grid(row=2, column=0)
-    songs_label = ctk.CTkLabel(songs_frame, text=saved_songs_str)
+    songs_label = WiffyTextLabel(songs_frame, text=saved_songs_str)
     if saved_songs_count:
         songs_frame.grid(row=0, column=0, padx=10, pady=5)
         songs_label.pack()
@@ -178,9 +177,9 @@ def open_show_songs_menu(app: App, info_label: ctk.CTkLabel, content_frame: ctk.
     )
 
 
-def start_tracks_parsing(info_label: ctk.CTkLabel) -> None:
-    clear_info_label_if_not_empty(info_label)
-    info_label.configure(text="Getting data about tracks from VK page...", text_color="#c0c0c0")
+def start_tracks_parsing(info_label: WiffyTextLabel) -> None:
+    info_label.clear()
+    info_label.configure(text="Getting data about tracks from VK page...")
     try:
         requests.get("https://kissvk.com")
         parse()
@@ -208,12 +207,12 @@ def start_tracks_parsing(info_label: ctk.CTkLabel) -> None:
 
 
 def create_download_frame_widgets(download_frame: ctk.CTkFrame, download_path: str) -> dict:
-    tracks_info_label = ctk.CTkLabel(download_frame, text="Tracks to download:")
-    spinbox = widgets.Spinbox(download_frame, width=120)
-    info_dir_label = ctk.CTkLabel(download_frame, text="Current download folder:")
-    current_dir_label = ctk.CTkLabel(download_frame, text=download_path)
-    change_dir_button = ctk.CTkButton(download_frame, text="Change", font=("Arial", 20))
-    apply_button = ctk.CTkButton(download_frame, text="Apply and download", font=("Arial", 20))
+    tracks_info_label = WiffyTextLabel(download_frame, text="Tracks to download:")
+    spinbox = Spinbox(download_frame, width=120)
+    info_dir_label = WiffyTextLabel(download_frame, text="Current download folder:")
+    current_dir_label = WiffyTextLabel(download_frame, text=download_path)
+    change_dir_button = ctk.CTkButton(download_frame, text="Change", font=app_settings.base_font)
+    apply_button = ctk.CTkButton(download_frame, text="Apply and download", font=app_settings.base_font)
     return {
         "tracks_info_label": tracks_info_label,
         "spinbox": spinbox,
@@ -224,7 +223,7 @@ def create_download_frame_widgets(download_frame: ctk.CTkFrame, download_path: s
     }
 
 
-def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: ctk.CTkLabel, **spinbox_kwargs) -> None:
+def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: WiffyTextLabel, **spinbox_kwargs) -> None:
     download_frame = ctk.CTkFrame(parent_frame, corner_radius=5)
 
     download_path = get_download_path() or get_default_download_path()
@@ -252,8 +251,8 @@ def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: ctk.CTkLabel, **
     grid_download_frame_widgets(download_frame_widgets)
 
 
-def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: ctk.CTkLabel) -> None:
-    clear_info_label_if_not_empty(info_label)
+def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: WiffyTextLabel) -> None:
+    info_label.clear()
     content_frame = create_content_frame(app)
 
     tracks_count = count_saved_tracks()
@@ -281,13 +280,13 @@ def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: ctk.CT
 
 
 
-def create_progressbar_elements(pb_frame: ctk.CTkFrame, songs_count: int) -> tuple[ctk.CTkProgressBar, ctk.CTkLabel]:
+def create_progressbar_elements(pb_frame: ctk.CTkFrame, songs_count: int) -> tuple[ctk.CTkProgressBar, WiffyTextLabel]:
     progressbar = ctk.CTkProgressBar(pb_frame, width=320, corner_radius=5)
-    pb_label = ctk.CTkLabel(pb_frame, text=f"0/{songs_count}")
+    pb_label = WiffyTextLabel(pb_frame, text=f"0/{songs_count}")
     return progressbar, pb_label
 
 
-def grid_progressbar_elements(pb_frame: ctk.CTkFrame, pb: ctk.CTkProgressBar, pb_label: ctk.CTkLabel) -> None:
+def grid_progressbar_elements(pb_frame: ctk.CTkFrame, pb: ctk.CTkProgressBar, pb_label: WiffyTextLabel) -> None:
     pb_frame.grid(row=0, column=0, padx=10, pady=5, columnspan=2)  # grids on content frame
 
     # grids on progressbar frame
@@ -296,7 +295,7 @@ def grid_progressbar_elements(pb_frame: ctk.CTkFrame, pb: ctk.CTkProgressBar, pb
 
 
 def download_songs_with_progressbar(
-    pb: ctk.CTkProgressBar, pb_label: ctk.CTkLabel, songs_count: int | None = None
+    pb: ctk.CTkProgressBar, pb_label: WiffyTextLabel, songs_count: int | None = None
 ) -> None:
     songs_data = make_songs_data_dict(count=songs_count)
     for index, song in enumerate(songs_data, start=1):
@@ -307,10 +306,10 @@ def download_songs_with_progressbar(
 
 
 def start_tracks_downloading(
-    info_label: ctk.CTkLabel,
+    info_label: WiffyTextLabel,
     content_frame: ctk.CTkFrame,
     download_frame: ctk.CTkFrame,
-    spinbox: widgets.Spinbox,
+    spinbox: Spinbox,
 ) -> None:
     info_label.configure(text="Downloading tracks...", text_color="#c0c0c0")
     choosed_tracks_count = spinbox.get()
@@ -352,11 +351,11 @@ def start_tracks_downloading(
 def draw_main_ui(
     frame: ctk.CTkFrame,
     app: App,
-    info_label: ctk.CTkLabel,
+    info_label: WiffyTextLabel,
     forms: dict | None = None,
     clear_frame: bool = False,
 ) -> None:
-    clear_info_label_if_not_empty(info_label)
+    info_label.clear()
     if clear_frame:
         frame.destroy()
         frame = create_content_frame(app)
@@ -386,21 +385,21 @@ def draw_main_ui(
         find_tracks_button = ctk.CTkButton(
             frame,
             text="Find tracks from VK",
-            font=("Arial", 20),
+            font=app_settings.base_font,
             command=tracks_parsing_thread.start,
         )
         find_tracks_button.place(relx=0.5, rely=0.2, anchor="center", relwidth=0.75, relheight=0.2)
         show_tracks_button = ctk.CTkButton(
             frame,
             text="Show found tracks",
-            font=("Arial", 20),
+            font=app_settings.base_font,
             command=lambda: open_show_songs_menu(app=app, content_frame=frame, info_label=info_label),
         )
         show_tracks_button.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.75, relheight=0.2)
         download_tracks_button = ctk.CTkButton(
             frame,
             text="Download found tracks",
-            font=("Arial", 20),
+            font=app_settings.base_font,
             command=lambda: open_download_menu(app=app, content_frame=frame, info_label=info_label),
         )
         download_tracks_button.place(relx=0.5, rely=0.8, anchor="center", relwidth=0.75, relheight=0.2)
@@ -414,7 +413,7 @@ def draw_main_ui(
 
 def draw_ui(app: App) -> None:
     top_frame, info_text_frame, content_frame = create_frames(app)
-    info_label = ctk.CTkLabel(info_text_frame, text="")
+    info_label = WiffyTextLabel(info_text_frame)
     info_label.place(relx=0.5, rely=0.5, anchor="center")
     draw_wiffy_label(frame=top_frame)
     draw_relogin_button(app=app, top_frame=top_frame, content_frame=content_frame, info_label=info_label)
