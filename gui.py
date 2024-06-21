@@ -2,8 +2,8 @@ import base64
 import os
 
 from utils.user_data import get_pwd, set_pwd, save_vk_login
-from utils.counters import count_saved_tracks
-from utils.validation import get_email_regex, get_phone_number_regex, string_is_email
+from utils.counters import get_tracks_count
+from utils.validation import validate_user_data
 from wiffy_gui.app import App
 from wiffy_gui.items.buttons import BackButton, MainMenuButton
 from wiffy_gui.items.labels import WiffyTextLabel, draw_app_header
@@ -179,14 +179,11 @@ def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: WiffyT
     info_label.clear()
     content_frame = create_content_frame(app)
 
-    tracks_count = count_saved_tracks()
-    default_tracks_count = 50 if tracks_count >= 50 else tracks_count
-
     draw_download_frame(
         parent_frame=content_frame,
         info_label=info_label,
-        tracks_count=tracks_count,
-        default_tracks_count=default_tracks_count,
+        tracks_count=get_tracks_count(),
+        default_tracks_count=get_tracks_count(get_default=True),
     )
 
     draw_back_button(
@@ -217,20 +214,7 @@ def draw_main_ui(
             if forms.get("login") is not None and forms.get("pwd") is not None:
                 login = forms["login"].get()
                 set_pwd(base64.b64encode(forms.get("pwd").get().encode("utf-8")))
-                pwd = get_pwd()
-                email_regex = get_email_regex()
-                phone_number_regex = get_phone_number_regex()
-
-                if not login or not pwd:
-                    raise ValueError("Login and/or password are not specified. Please, try again.")
-                if string_is_email(string=login):
-                    if not email_regex.match(login):
-                        raise ValueError("Email is incorrect. Please, try again.")
-                else:
-                    if not phone_number_regex.match(login):
-                        raise ValueError("Phone number is incorrect. Please, try again.")
-                    if len(forms["pwd"].get()) < 8:
-                        raise ValueError("VK password cannot contain less than 8 characters.\nPlease, try again.")
+                validate_user_data(login=login)
                 save_vk_login(login)
                 frame.destroy()
         frame = create_content_frame(app)

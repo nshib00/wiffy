@@ -1,7 +1,7 @@
 from os import getenv
 from dotenv import load_dotenv
 from selenium.common.exceptions import TimeoutException, WebDriverException
-from selenium.webdriver import Keys
+from selenium.webdriver import Keys, Chrome, ChromeService, ChromeOptions
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -14,7 +14,17 @@ from wiffy_parser.html import save_html_in_file
 
 load_dotenv()
 
-logger = get_logger("parser.log", filemode="w")
+logger = get_logger(__file__)
+
+
+def create_driver() -> WebDriver:
+    driver_options = ChromeOptions()
+    # driver_options.add_argument("--headless=new")
+    driver_options.add_extension("D:\projects\wiffy\chromedriver\extensions\AdBlocker-Ultimate.crx")
+    driver_service = ChromeService()
+    driver = Chrome(options=driver_options, service=driver_service)
+    driver.maximize_window() # в релизной версии будет заменено на driver.minimize_window()
+    return driver
 
 
 def get_source_page(driver: WebDriver) -> None:

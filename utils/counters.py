@@ -13,3 +13,11 @@ def calls_counter(func):
 
     wrapper.count = 0
     return wrapper
+
+
+def get_tracks_count(get_default: bool = True) -> int:
+    default_tracks_count = 50
+    tracks_count = count_saved_tracks()
+    if get_default or tracks_count < 50:
+        return default_tracks_count
+    return tracks_count
