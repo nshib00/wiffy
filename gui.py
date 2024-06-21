@@ -1,13 +1,17 @@
 import base64
 import os
-import re
 
 from selenium.common import WebDriverException
 
 from utils.user_data import get_pwd, set_pwd, save_vk_login
 from utils.counters import count_saved_tracks
-from utils.paths import change_download_path, get_default_download_path, get_download_path
+from utils.paths import get_default_download_path, get_download_path
 from utils.validation import get_email_regex, get_phone_number_regex, string_is_email
+from wiffy_gui.app import App
+from wiffy_gui.items.labels import clear_info_label_if_not_empty
+from wiffy_gui.layout.download_menu import configure_download_frame_widgets, grid_download_frame_widgets
+from wiffy_gui.layout.main_menu import create_content_frame, create_frames
+from wiffy_gui.layout.show_songs_menu import configure_ssm_grid
 from wiffy_parser.core import parse
 from wiffy_parser.download import download_song, make_download_path
 from wiffy_parser.songs_data import get_saved_songs_info, make_songs_data_dict
@@ -16,7 +20,6 @@ from typing import Callable
 
 import customtkinter as ctk
 import requests
-from customtkinter import filedialog
 from dotenv import find_dotenv, load_dotenv
 
 from utils.logger import get_logger
@@ -31,41 +34,6 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
 
 load_dotenv(find_dotenv())
-
-
-class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("Wiffy")
-        self.geometry("400x400")
-        self.iconbitmap("images/icon-16.ico")
-        self.resizable(False, False)
-
-
-def create_content_frame(app: App) -> ctk.CTkFrame:
-    content_frame = ctk.CTkFrame(app, width=400, height=220, corner_radius=0)
-    content_frame.grid(row=2, column=0, sticky="nesw")
-    return content_frame
-
-
-def clear_info_label_if_not_empty(info_label: ctk.CTkLabel) -> None:
-    if info_label._text:
-        info_label.configure(text="", text_color="#c0c0c0")
-
-
-def create_frames(app: App) -> tuple[ctk.CTkFrame, ctk.CTkFrame, ctk.CTkFrame]:
-    top_frame = ctk.CTkFrame(app, width=400, height=120, corner_radius=0)
-    info_text_frame = ctk.CTkFrame(app, width=400, height=60, corner_radius=0)
-    content_frame = create_content_frame(app)
-
-    top_frame.grid(row=0, column=0, sticky="nesw")
-    info_text_frame.grid(row=1, column=0, sticky="nesw")
-    app.grid_rowconfigure(2, weight=1)
-    app.grid_rowconfigure((0, 1), weight=0)
-    content_frame.grid_rowconfigure((0, 1), weight=1)
-    content_frame.grid_rowconfigure(2, weight=0)
-
-    return top_frame, info_text_frame, content_frame
 
 
 def draw_wiffy_label(frame: ctk.CTkFrame) -> None:
@@ -193,8 +161,7 @@ def open_show_songs_menu(app: App, info_label: ctk.CTkLabel, content_frame: ctk.
             pady=5,
             command=lambda: draw_main_ui(info_label=info_label, app=app, clear_frame=True, frame=content_frame),
         )
-        content_frame.grid_rowconfigure(0, weight=2)
-        content_frame.grid_rowconfigure(1, weight=1)
+        configure_ssm_grid(content_frame)
     else:
         info_label.configure(
             text="There are no saved tracks. Before downloading,\nclick on the “find tracks” "
@@ -240,22 +207,7 @@ def start_tracks_parsing(info_label: ctk.CTkLabel) -> None:
         )
 
 
-def configure_dir_label(dir_label: ctk.CTkLabel, new_path: str | None = None) -> None:
-    if new_path is None:
-        label_text = dir_label.cget("text")
-        if len(label_text) > 50:
-            dir_label.configure(text=label_text[:50] + "...")
-    else:
-        if new_path:
-            if len(new_path) <= 50:
-                dir_label.configure(text=new_path)
-            else:
-                dir_label.configure(text=new_path[:50] + "...")
-        else:
-            dir_label.configure(text=get_default_download_path())
-
-
-def create_and_get_download_frame_widgets(download_frame: ctk.CTkFrame, download_path: str) -> dict:
+def create_download_frame_widgets(download_frame: ctk.CTkFrame, download_path: str) -> dict:
     tracks_info_label = ctk.CTkLabel(download_frame, text="Tracks to download:")
     spinbox = widgets.Spinbox(download_frame, width=120)
     info_dir_label = ctk.CTkLabel(download_frame, text="Current download folder:")
@@ -272,27 +224,11 @@ def create_and_get_download_frame_widgets(download_frame: ctk.CTkFrame, download
     }
 
 
-def grid_download_frame_widgets(df_widgets: dict) -> None:
-    df_widgets["tracks_info_label"].grid(row=0, column=0, padx=10, pady=5, sticky="ew")
-    df_widgets["spinbox"].grid(row=0, column=1, pady=5, padx=10, sticky="ew")
-    for index, widget in enumerate(list(df_widgets.values())[2:], start=1):
-        widget.grid(row=index, column=0, padx=10, pady=2, sticky="nwse", columnspan=2)
-
-
-def configure_download_frame_widgets(df_widgets: dict, thread: Thread, **spinbox_kwargs) -> None:
-    configure_dir_label(dir_label=df_widgets["current_dir_label"])
-    df_widgets["change_dir_button"].configure(
-        command=lambda: open_change_dir_menu(dir_label=df_widgets["current_dir_label"])
-    )
-    df_widgets["apply_button"].configure(command=thread.start)
-    df_widgets["spinbox"].configure(**spinbox_kwargs)
-
-
 def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: ctk.CTkLabel, **spinbox_kwargs) -> None:
     download_frame = ctk.CTkFrame(parent_frame, corner_radius=5)
 
     download_path = get_download_path() or get_default_download_path()
-    download_frame_widgets = create_and_get_download_frame_widgets(download_frame, download_path)
+    download_frame_widgets = create_download_frame_widgets(download_frame, download_path)
 
     download_tracks_thread = Thread(
         target=start_tracks_downloading,
@@ -318,7 +254,6 @@ def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: ctk.CTkLabel, **
 
 def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: ctk.CTkLabel) -> None:
     clear_info_label_if_not_empty(info_label)
-    # content_frame.destroy()
     content_frame = create_content_frame(app)
 
     tracks_count = count_saved_tracks()
@@ -343,10 +278,7 @@ def open_download_menu(app: App, content_frame: ctk.CTkFrame, info_label: ctk.CT
     )
 
 
-def open_change_dir_menu(dir_label: ctk.CTkLabel) -> None:
-    new_download_path = filedialog.askdirectory()
-    change_download_path(new_download_path)
-    configure_dir_label(dir_label, new_path=new_download_path)
+
 
 
 def create_progressbar_elements(pb_frame: ctk.CTkFrame, songs_count: int) -> tuple[ctk.CTkProgressBar, ctk.CTkLabel]:
