@@ -2,7 +2,7 @@ import base64
 import os
 import re
 
-from selenium.common import SessionNotCreatedException, WebDriverException
+from selenium.common import WebDriverException
 
 from utils.user_data import get_pwd, set_pwd, save_vk_login
 from utils.counters import count_saved_tracks
@@ -223,14 +223,6 @@ def start_tracks_parsing(info_label: ctk.CTkLabel) -> None:
             text_color="red",
         )
         logger.error(f"{e.__class__.__name__}: {e}")
-    except SessionNotCreatedException as e: # скорее всего, этот код уже не будет полезен и далее будет удален
-        current_driver_version = re.search(r'only supports Chrome version [\d.]+', str(e)).group(0).split(' ')[-1]
-        browser_version = re.search(r'Current browser version is [\d.]+', str(e)).group(0).split(' ')[-1]
-        info_label.configure(
-            text=f"Driver session error. Current driver version: {current_driver_version}.\nDriver needs to be updated to version {browser_version} to work correctly.",
-            text_color="red",
-        )
-        logger.error(f"{e.__class__.__name__}: {e}")
     except WebDriverException as e:
         info_label.configure(
             text="Parser exception occured.\nProbably, the page didn't load "
@@ -400,7 +392,10 @@ def start_tracks_downloading(
     progressbar.set(0)
     try:
         if int(choosed_tracks_count) > saved_tracks_count:
-            raise ValueError(f"Incorrect value. Tracks count should be between 1 and {saved_tracks_count}.")
+            if saved_tracks_count > 0:
+                raise ValueError(f"Incorrect value. Tracks count should be between 1 and {saved_tracks_count}.")
+            else:
+                raise ValueError(f"You have no tracks for download. Find tracks and then try again.")
         if choosed_tracks_count is None:
             download_songs_with_progressbar(pb=progressbar, pb_label=pb_label)
         else:
@@ -477,6 +472,9 @@ def draw_main_ui(
             command=lambda: open_download_menu(app=app, content_frame=frame, info_label=info_label),
         )
         download_tracks_button.place(relx=0.5, rely=0.8, anchor="center", relwidth=0.75, relheight=0.2)
+    except FileNotFoundError as e:
+        info_label.configure(text='You have no saved tracks. Try to find tracks before.', text_color="red")
+        logger.error(f"{e.__class__.__name__}: {e}")
     except ValueError as e:
         info_label.configure(text=e.args[0], text_color="red")
         logger.error(f"{e.__class__.__name__}: {e}")
