@@ -85,11 +85,7 @@ def kissvk_auth(driver: WebDriver) -> None:
 
 
 def close_popup_window(driver: WebDriver) -> None:
-    ''' Закрывает окно браузера (обозначено popup_window), открывающееся расширением. '''
-    main_window = driver.current_window_handle # основное окно (в котором открыт kissvk)
-    main_window_index = driver.window_handles.index(main_window) # индекс может иметь значения 0 или 1 (т.к. selenium открывает только 2 окна: с kissvk и с расширением)
-    popup_window = driver.window_handles[not main_window_index] # если одно окно из двух - с kissvk, то другое - с расширением
+    main_window, popup_window = driver.window_handles
     driver.switch_to.window(popup_window)
     driver.close()
     driver.switch_to.window(main_window)
-    
