@@ -1,38 +1,18 @@
+import base64
+from threading import Thread
 import customtkinter as ctk
 
-from wiffy_gui.app import app, App
+from utils.user_data import save_vk_login, set_pwd
+from utils.validation import validate_user_data
 from wiffy_gui.items.buttons import MainMenuButton
 from wiffy_gui.config import app_settings
+from wiffy_gui.items.frames import create_content_frame, create_frames
 from wiffy_gui.items.labels import WiffyTextLabel, draw_app_header
+from utils.logger import get_logger
+from wiffy_gui.parsing import start_tracks_parsing
 
 
-def create_content_frame() -> ctk.CTkFrame:
-    content_frame = ctk.CTkFrame(app, width=400, height=220, corner_radius=0)
-    content_frame.grid(row=2, column=0, sticky="nesw")
-    return content_frame
-
-
-def create_frames() -> tuple[ctk.CTkFrame, ctk.CTkFrame, ctk.CTkFrame]:
-    top_frame = ctk.CTkFrame(app, width=400, height=120, corner_radius=0)
-    info_text_frame = ctk.CTkFrame(app, width=400, height=60, corner_radius=0)
-    content_frame = create_content_frame()
-
-    top_frame.grid(row=0, column=0, sticky="nesw")
-    info_text_frame.grid(row=1, column=0, sticky="nesw")
-    app.grid_rowconfigure(2, weight=1)
-    app.grid_rowconfigure((0, 1), weight=0)
-    content_frame.grid_rowconfigure((0, 1), weight=1)
-    content_frame.grid_rowconfigure(2, weight=0)
-
-    return top_frame, info_text_frame, content_frame
-
-
-# def create_frames() -> tuple[ctk.CTkFrame, ctk.CTkFrame, ctk.CTkFrame]:
-#     top_frame, info_text_frame, content_frame = create_empty_frames()
-#     info_label = WiffyTextLabel(info_text_frame)
-#     info_label.place(relx=0.5, rely=0.5, anchor="center")
-#     draw_app_header(frame=top_frame)
-#     return top_frame, info_text_frame, content_frame
+logger = get_logger(__file__)
 
 
 def place_main_menu_buttons(buttons: tuple[ctk.CTkButton]) -> None:
@@ -64,4 +44,47 @@ def create_main_menu_buttons(content_frame: ctk.CTkFrame) -> tuple[ctk.CTkButton
     return buttons
 
 
+def configure_main_menu_buttons(buttons: tuple[MainMenuButton], info_label: WiffyTextLabel,
+                                                                                    content_frame: ctk.CTkFrame) -> None:
+    tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
+    find_tracks_button, show_tracks_button, download_tracks_button = buttons
+
+    find_tracks_button.configure(command=tracks_parsing_thread.start)
+    # show_tracks_button.configure(
+    #     command=lambda: open_show_songs_menu(content_frame=content_frame, info_label=info_label)
+    # )
+    # download_tracks_button.configure(
+    #     command=lambda: open_download_menu(content_frame=content_frame, info_label=info_label)
+    # )
+
+
+def draw_main_menu(
+    forms: dict | None = None,
+    clear_frame: bool = False,
+) -> None:
+    top_frame, info_text_frame, frame = create_frames()
+    info_label = WiffyTextLabel(info_text_frame)
+    info_label.place(relx=0.5, rely=0.5, anchor="center")
+    draw_app_header(frame=top_frame)
+    info_label.clear()
+    if clear_frame:
+        frame.destroy()
+        frame = create_content_frame()
+    try:
+        if forms is not None:
+            if forms.get("login") is not None and forms.get("pwd") is not None:
+                login = forms["login"].get()
+                set_pwd(base64.b64encode(forms.get("pwd").get().encode("utf-8")))
+                validate_user_data(login=login)
+                save_vk_login(login)
+                frame.destroy()
+        frame = create_content_frame()
+        menu_buttons = create_main_menu_buttons(frame)
+        configure_main_menu_buttons(buttons=menu_buttons, info_label=info_label, content_frame=frame)
+    except FileNotFoundError as e:
+        info_label.configure(text='You have no saved tracks. Try to find tracks before.', text_color="red")
+        logger.error(f"{e.__class__.__name__}: {e}")
+    except ValueError as e:
+        info_label.configure(text=e.args[0], text_color="red")
+        logger.error(f"{e.__class__.__name__}: {e}")
 
