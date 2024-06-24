@@ -1,4 +1,4 @@
-from gui import start_app
+from wiffy_gui.core import start_app
 from pathlib import Path
 
 
