@@ -1,4 +1,6 @@
+from ssl import SSLError
 import customtkinter as ctk
+from requests import ConnectionError
 
 from exceptions import TracksNotFoundError
 from utils.counters import count_saved_tracks
@@ -42,6 +44,8 @@ def start_tracks_downloading(
     grid_progressbar_elements(pb_frame=progressbar_frame, pb=progressbar, pb_label=pb_label)
     progressbar.set(0)
     try:
+        if int(choosed_tracks_count) <= 0:
+            raise ValueError(f"You choose no tracks for download.\nTo download tracks, go back and choose tracks count greater than 0.")
         if int(choosed_tracks_count) > saved_tracks_count:
             if saved_tracks_count > 0:
                 raise ValueError(f"Incorrect value. Tracks count should be between 1 and {saved_tracks_count}.")
@@ -60,6 +64,12 @@ def start_tracks_downloading(
         logger.error(f"{e.__class__.__name__}: {e}")
     except ValueError as e:
         info_label.configure(text=e.args[0], text_color="red")
+        logger.error(f"{e.__class__.__name__}: {e}")
+    except (SSLError, ConnectionError) as e:
+        info_label.configure(
+            text="Internet connection error.\nPlease, check your internet connection.",
+            text_color="red",
+        )
         logger.error(f"{e.__class__.__name__}: {e}")
     except Exception as e:
         info_label.configure(text=f"Error occured: {e.__class__.__name__}.", text_color="red")
