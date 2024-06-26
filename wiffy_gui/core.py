@@ -46,7 +46,6 @@ def configure_main_menu_buttons(buttons: tuple[MainMenuButton], info_label: Wiff
 
 
 def draw_login_button(frame: ctk.CTkFrame, info_label: WiffyTextLabel, clear_frame=False) -> None:
-    info_label.clear()
     if clear_frame:
         frame.destroy()
         frame = create_content_frame()
@@ -64,7 +63,6 @@ def draw_relogin_button(
     content_frame: ctk.CTkFrame,
     info_label: WiffyTextLabel,
 ) -> None:
-    info_label.clear()
     relogin_button = ctk.CTkButton(
         top_frame,
         text="⭮",
@@ -126,7 +124,7 @@ def open_show_songs_menu(info_label: WiffyTextLabel, content_frame: ctk.CTkFrame
     info_label.clear()
     content_frame.destroy()
     content_frame = ctk.CTkFrame(app, corner_radius=0)
-    songs_frame = ctk.CTkScrollableFrame(content_frame, width=360, height=130, label_anchor="w")
+    songs_frame = ctk.CTkScrollableFrame(content_frame, width=app_settings.width-40, height=app_settings.height*0.3, label_anchor="w")
     saved_songs_str, saved_songs_count = get_saved_songs_info()
     content_frame.grid(row=2, column=0)
     songs_label = WiffyTextLabel(songs_frame, text=saved_songs_str)
@@ -154,7 +152,7 @@ def open_download_menu(content_frame: ctk.CTkFrame, info_label: WiffyTextLabel) 
         tracks_count=get_tracks_count(),
         default_tracks_count=get_tracks_count(get_default=True),
     )
-    draw_back_button(content_frame, row=3, column=0, width=380, height=30, columnspan=2)
+    draw_back_button(content_frame, row=3, column=0, width=app_settings.width-20, height=30, columnspan=2)
 
 
 def draw_main_menu(
@@ -163,12 +161,13 @@ def draw_main_menu(
 ) -> None:
     top_frame, info_text_frame, frame = create_frames()
     info_label = WiffyTextLabel(info_text_frame)
-    info_label.place(relx=0.5, rely=0.5, anchor="center")
-    draw_app_header(frame=top_frame)
+    info_label.place_in_center()
     info_label.clear()
     if clear_frame:
         frame.destroy()
         frame = create_content_frame()
+    draw_app_header(frame=top_frame)
+    draw_relogin_button(top_frame=top_frame, content_frame=frame, info_label=info_label)
     try:
         if forms is not None:
             if forms.get("login") is not None and forms.get("pwd") is not None:
@@ -191,7 +190,7 @@ def draw_main_menu(
 def draw_ui() -> None:
     top_frame, info_text_frame, content_frame = create_frames()
     info_label = WiffyTextLabel(info_text_frame)
-    info_label.place(relx=0.5, rely=0.5, anchor="center")
+    info_label.place_in_center()
     draw_app_header(frame=top_frame)
     draw_relogin_button(top_frame=top_frame, content_frame=content_frame, info_label=info_label)
     if os.getenv("VK_LOGIN") is None or get_pwd() is None:
