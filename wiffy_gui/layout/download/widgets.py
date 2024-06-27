@@ -1,5 +1,6 @@
-import customtkinter as ctk
 from threading import Thread
+
+import customtkinter as ctk
 
 from utils.paths import get_default_download_path, get_download_path
 from wiffy_gui.config import app_settings
@@ -10,7 +11,7 @@ from wiffy_gui.layout.download.dir_menu import configure_dir_label, open_change_
 
 def create_download_frame_widgets(download_frame: ctk.CTkFrame) -> dict:
     download_path = get_download_path() or get_default_download_path()
-    
+
     tracks_info_label = WiffyTextLabel(download_frame, text="Tracks to download:")
     spinbox = Spinbox(download_frame, width=120)
     info_dir_label = WiffyTextLabel(download_frame, text="Current download folder:")
@@ -35,7 +36,7 @@ def grid_download_frame_widgets(df_widgets: dict) -> None:
 
 
 def configure_download_frame_widgets(df_widgets: dict, thread: Thread, **spinbox_kwargs) -> None:
-    
+
     configure_dir_label(dir_label=df_widgets["current_dir_label"])
     df_widgets["change_dir_button"].configure(
         command=lambda: open_change_dir_menu(dir_label=df_widgets["current_dir_label"])

@@ -1,6 +1,7 @@
 from pathlib import Path
-from fake_useragent import UserAgent
+
 import requests
+from fake_useragent import UserAgent
 
 from exceptions import TracksNotFoundError
 from utils.counters import calls_counter
@@ -8,7 +9,6 @@ from utils.formatting import format_to_win_path_string
 from utils.logger import get_logger
 from utils.paths import make_download_path
 from wiffy_parser.songs_data import make_songs_data_dict
-
 
 logger = get_logger(__name__)
 
@@ -23,9 +23,9 @@ def download_song(song: dict, download_path: Path) -> None:
     filename = format_to_win_path_string(string=song["title"])
     song_path = download_path / f"{filename}.mp3"
 
-    ''' Скачиваем аудиофайл, если его нет в папке или если аудиофайл пустой. '''
+    """ Скачиваем аудиофайл, если его нет в папке или если аудиофайл пустой. """
     if not song_path.is_file() or song_path.is_file() and song_path.stat().st_size == 0:
-        for retry in range(retries_count-1, -1, -1): # обратный отсчет ретраев от retries_count до 0
+        for retry in range(retries_count - 1, -1, -1):  # обратный отсчет ретраев от retries_count до 0
             response = requests.get(song["url"], headers=headers)
             with open(song_path, "wb") as audio:
                 audio.write(response.content)

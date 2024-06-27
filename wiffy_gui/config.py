@@ -11,18 +11,18 @@ class AppSettings:
     @property
     def base_font(self):
         return (self.base_font_type, self.base_font_size)
-    
+
     @property
     def base_font_small(self):
         return (self.base_font_type, self.base_font_size - 4)
-    
+
     @property
     def base_font_big(self):
         return (self.base_font_type, self.base_font_size + 15)
-    
+
     @property
     def base_font_header(self):
         return (self.base_font_type, self.base_font_size + 40)
-    
+
 
 app_settings = AppSettings()

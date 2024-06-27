@@ -3,15 +3,13 @@ from selenium.common.exceptions import ElementNotInteractableException
 from selenium.webdriver.common.by import By
 
 from utils.logger import get_logger
-from wiffy_parser.selenium import create_driver
 from wiffy_parser.html import get_song_cards
-from wiffy_parser.selenium import close_popup_window, get_source_page, kissvk_auth
+from wiffy_parser.selenium import close_popup_window, create_driver, get_source_page, kissvk_auth
 from wiffy_parser.songs_data import save_songs_data
-
 
 load_dotenv()
 
-logger = get_logger("parser.log", filemode="w")
+logger = get_logger(__name__)
 
 
 def parse() -> None:
@@ -21,7 +19,7 @@ def parse() -> None:
         close_popup_window(driver)
         kissvk_auth(driver)
     except ElementNotInteractableException as e:
-        close_btn = driver.find_element(By.CLASS_NAME, 'close')
+        close_btn = driver.find_element(By.CLASS_NAME, "close")
         close_btn.click()
         logger.warning(e)
     except Exception as e:

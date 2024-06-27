@@ -1,4 +1,5 @@
 from ssl import SSLError
+
 import customtkinter as ctk
 from requests import ConnectionError
 
@@ -12,8 +13,7 @@ from wiffy_gui.items.progressbar import create_progressbar_elements, grid_progre
 from wiffy_parser.download import download_song
 from wiffy_parser.songs_data import make_songs_data_dict
 
-
-logger = get_logger(__file__)
+logger = get_logger(__name__)
 
 
 def download_songs_with_progressbar(
@@ -45,12 +45,15 @@ def start_tracks_downloading(
     progressbar.set(0)
     try:
         if int(choosed_tracks_count) <= 0:
-            raise ValueError(f"You choose no tracks for download.\nTo download tracks, go back and choose tracks count greater than 0.")
+            raise ValueError(
+                "You choose no tracks for download.\n"
+                "To download tracks, go back and choose tracks count greater than 0."
+            )
         if int(choosed_tracks_count) > saved_tracks_count:
             if saved_tracks_count > 0:
                 raise ValueError(f"Incorrect value. Tracks count should be between 1 and {saved_tracks_count}.")
             else:
-                raise ValueError(f"You have no tracks for download. Find tracks and then try again.")
+                raise ValueError("You have no tracks for download. Find tracks and then try again.")
         if choosed_tracks_count is None:
             download_songs_with_progressbar(pb=progressbar, pb_label=pb_label)
         else:

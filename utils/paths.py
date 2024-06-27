@@ -1,7 +1,7 @@
 from os import getenv
 from pathlib import Path
-from dotenv import set_key, load_dotenv, find_dotenv
 
+from dotenv import find_dotenv, load_dotenv, set_key
 
 envfile = find_dotenv()
 load_dotenv(envfile)

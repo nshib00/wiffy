@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup
 
 from utils.logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -21,5 +20,7 @@ def get_song_cards() -> list:
     with open("source.html", encoding="utf-8") as file:
         src = file.read()
     soup = BeautifulSoup(src, "lxml")
-    trs = [tr for tr in soup.find_all("tr") if tr.attrs.get("ng-repeat") is not None] # ng-repeat: "song in songs | limitTo:13:0"
+    trs = [
+        tr for tr in soup.find_all("tr") if tr.attrs.get("ng-repeat") is not None
+    ]  # ng-repeat: "song in songs | limitTo:13:0"
     return trs

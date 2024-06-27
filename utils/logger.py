@@ -7,7 +7,7 @@ def get_logger(logger_filename: str, filemode="a") -> logging.Logger:
     logger = logging.getLogger(__name__)
     logger_format = "(%(name)s) %(asctime)s [%(levelname)s] function: %(funcName)s | %(message)s"
     logging.basicConfig(
-        filename=f"logs/{logger_filename}",
+        filename=f"logs/{logger_filename}.log",
         level=logging.INFO,
         format=logger_format,
         filemode=filemode,

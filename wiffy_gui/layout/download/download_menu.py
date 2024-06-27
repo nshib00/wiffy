@@ -1,9 +1,14 @@
-import customtkinter as ctk
 from threading import Thread
+
+import customtkinter as ctk
 
 from wiffy_gui.download import start_tracks_downloading
 from wiffy_gui.items.labels import WiffyTextLabel
-from wiffy_gui.layout.download.widgets import configure_download_frame_widgets, create_download_frame_widgets, grid_download_frame_widgets
+from wiffy_gui.layout.download.widgets import (
+    configure_download_frame_widgets,
+    create_download_frame_widgets,
+    grid_download_frame_widgets,
+)
 
 
 def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: WiffyTextLabel, **spinbox_kwargs) -> None:

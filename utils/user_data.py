@@ -1,8 +1,8 @@
-import keyring
-import getpass
 import base64
-from dotenv import load_dotenv, find_dotenv, set_key
+import getpass
 
+import keyring
+from dotenv import find_dotenv, load_dotenv, set_key
 
 envfile = find_dotenv()
 load_dotenv(envfile)

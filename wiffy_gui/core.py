@@ -2,9 +2,12 @@ import base64
 import os
 from threading import Thread
 
-from utils.user_data import get_pwd, save_vk_login, set_pwd
-from utils.counters import get_tracks_count
+import customtkinter as ctk
+from dotenv import find_dotenv, load_dotenv
 
+from utils.counters import get_tracks_count
+from utils.logger import get_logger
+from utils.user_data import get_pwd, save_vk_login, set_pwd
 from utils.validation import validate_user_data
 from wiffy_gui.app import app
 from wiffy_gui.config import app_settings
@@ -18,21 +21,17 @@ from wiffy_gui.layout.show_songs_menu import configure_ssm_grid
 from wiffy_gui.parsing import start_tracks_parsing
 from wiffy_parser.songs_data import get_saved_songs_info
 
-import customtkinter as ctk
-from dotenv import find_dotenv, load_dotenv
-
-from utils.logger import get_logger
-
-
-logger = get_logger(__file__)
+logger = get_logger(__name__)
 
 
 load_dotenv(find_dotenv())
 
 
-
-def configure_main_menu_buttons(buttons: tuple[MainMenuButton], info_label: WiffyTextLabel,
-                                                                                    content_frame: ctk.CTkFrame) -> None:
+def configure_main_menu_buttons(
+    buttons: tuple[MainMenuButton],
+    info_label: WiffyTextLabel,
+    content_frame: ctk.CTkFrame,
+) -> None:
     tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
     find_tracks_button, show_tracks_button, download_tracks_button = buttons
 
@@ -111,20 +110,19 @@ def draw_back_button(
         command=lambda: draw_main_menu(clear_frame=True),
         **kwargs,
     )
-    back_button.grid(
-        row=row,
-        column=column,
-        padx=padx,
-        pady=pady,
-        columnspan=columnspan
-    )
+    back_button.grid(row=row, column=column, padx=padx, pady=pady, columnspan=columnspan)
 
 
 def open_show_songs_menu(info_label: WiffyTextLabel, content_frame: ctk.CTkFrame) -> None:
     info_label.clear()
     content_frame.destroy()
     content_frame = ctk.CTkFrame(app, corner_radius=0)
-    songs_frame = ctk.CTkScrollableFrame(content_frame, width=app_settings.width-40, height=app_settings.height*0.3, label_anchor="w")
+    songs_frame = ctk.CTkScrollableFrame(
+        content_frame,
+        width=app_settings.width - 40,
+        height=app_settings.height * 0.3,
+        label_anchor="w",
+    )
     saved_songs_str, saved_songs_count = get_saved_songs_info()
     content_frame.grid(row=2, column=0)
     songs_label = WiffyTextLabel(songs_frame, text=saved_songs_str)
@@ -152,7 +150,14 @@ def open_download_menu(content_frame: ctk.CTkFrame, info_label: WiffyTextLabel) 
         tracks_count=get_tracks_count(),
         default_tracks_count=get_tracks_count(get_default=True),
     )
-    draw_back_button(content_frame, row=3, column=0, width=app_settings.width-20, height=30, columnspan=2)
+    draw_back_button(
+        content_frame,
+        row=3,
+        column=0,
+        width=app_settings.width - 20,
+        height=30,
+        columnspan=2,
+    )
 
 
 def draw_main_menu(
@@ -179,9 +184,6 @@ def draw_main_menu(
         frame = create_content_frame()
         menu_buttons = create_main_menu_buttons(frame)
         configure_main_menu_buttons(buttons=menu_buttons, info_label=info_label, content_frame=frame)
-    except FileNotFoundError as e:
-        info_label.configure(text='You have no saved tracks. Try to find tracks before.', text_color="red")
-        logger.error(f"{e.__class__.__name__}: {e}")
     except ValueError as e:
         info_label.configure(text=e.args[0], text_color="red")
         logger.error(f"{e.__class__.__name__}: {e}")

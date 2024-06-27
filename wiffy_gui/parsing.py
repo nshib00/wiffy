@@ -1,11 +1,11 @@
 import requests
+from selenium.common import WebDriverException
+
 from utils.logger import get_logger
 from wiffy_gui.items.labels import WiffyTextLabel
 from wiffy_parser.core import parse
-from selenium.common import WebDriverException
 
-
-logger = get_logger('parsing.log')
+logger = get_logger(__name__)
 
 
 def start_tracks_parsing(info_label: WiffyTextLabel) -> None:
