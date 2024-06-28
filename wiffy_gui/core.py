@@ -7,6 +7,7 @@ from dotenv import find_dotenv, load_dotenv
 
 from utils.counters import get_tracks_count
 from utils.logger import get_logger
+from utils.threads import run_thread
 from utils.user_data import get_pwd, save_vk_login, set_pwd
 from utils.validation import validate_user_data
 from wiffy_gui.app import app
@@ -35,7 +36,7 @@ def configure_main_menu_buttons(
     tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
     find_tracks_button, show_tracks_button, download_tracks_button = buttons
 
-    find_tracks_button.configure(command=tracks_parsing_thread.start)
+    find_tracks_button.configure(command=lambda: run_thread(tracks_parsing_thread))
     show_tracks_button.configure(
         command=lambda: open_show_songs_menu(content_frame=content_frame, info_label=info_label)
     )

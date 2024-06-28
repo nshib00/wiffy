@@ -3,6 +3,7 @@ from threading import Thread
 import customtkinter as ctk
 
 from utils.paths import get_default_download_path, get_download_path
+from utils.threads import run_thread
 from wiffy_gui.config import app_settings
 from wiffy_gui.download import start_tracks_downloading
 from wiffy_gui.items.custom import Spinbox
@@ -42,7 +43,7 @@ def configure_download_frame_widgets(df_widgets: dict, thread: Thread, **spinbox
     df_widgets["change_dir_button"].configure(
         command=lambda: open_change_dir_menu(dir_label=df_widgets["current_dir_label"])
     )
-    df_widgets["apply_button"].configure(command=thread.start)
+    df_widgets["apply_button"].configure(command=lambda: run_thread(thread))
     df_widgets["spinbox"].configure(**spinbox_kwargs)
 
 
