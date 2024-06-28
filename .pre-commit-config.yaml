@@ -16,7 +16,7 @@ repos:
         pass_filenames: false
 
       - id: flake8
-        name: isort
+        name: flake8
         entry: flake8 --config .flake8 .
         language: system
         types: [ python ]
