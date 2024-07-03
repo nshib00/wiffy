@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "wiffy"
+version = "0.3.15"
+description = "App with GUI for downloading audios from VK."
+authors = ["nshib <nshib54321@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+selenium = "^4.22.0"
+customtkinter = "^5.2.2"
+requests = "^2.32.3"
+black = "^24.4.2"
+flake8 = "^7.1.0"
+isort = "^5.13.2"
+python-dotenv = "^1.0.1"
+keyring = "^25.2.1"
+fake-useragent = "^1.5.1"
+bs4 = "^0.0.2"
+lxml = "^5.2.2"
+pre-commit = "^3.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
