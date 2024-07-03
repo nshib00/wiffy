@@ -6,7 +6,7 @@ import customtkinter as ctk
 from dotenv import find_dotenv, load_dotenv
 
 from utils.counters import get_tracks_count
-from utils.logger import get_logger
+from utils.logger import get_gui_logger
 from utils.threads import run_thread
 from utils.user_data import get_pwd, save_vk_login, set_pwd
 from utils.validation import validate_user_data
@@ -22,7 +22,7 @@ from wiffy_gui.layout.show_songs_menu import configure_ssm_grid
 from wiffy_gui.parsing import start_tracks_parsing
 from wiffy_parser.songs_data import get_saved_songs_info
 
-logger = get_logger(__name__)
+logger = get_gui_logger()
 
 
 load_dotenv(find_dotenv())

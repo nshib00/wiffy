@@ -1,8 +1,8 @@
 from bs4 import BeautifulSoup
 
-from utils.logger import get_logger
+from utils.logger import get_parser_logger
 
-logger = get_logger(__name__)
+logger = get_parser_logger()
 
 
 def save_html_in_file(pages_html: list[str]) -> None:

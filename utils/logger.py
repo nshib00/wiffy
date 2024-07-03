@@ -2,15 +2,18 @@ import logging
 from pathlib import Path
 
 
-def get_logger(logger_filename: str, filemode="a") -> logging.Logger:
+def create_logger(logger_filename: str) -> logging.Logger:
     Path("logs").mkdir(exist_ok=True)
     logger = logging.getLogger(logger_filename)
-    logger_format = "(%(name)s) %(asctime)s [%(levelname)s] function: %(funcName)s | %(message)s"
-    logging.basicConfig(
-        filename=f"logs/{logger_filename}.log",
-        level=logging.INFO,
-        format=logger_format,
-        filemode=filemode,
-        encoding="utf-8",
-    )
+    logger_format = "(%(module)s.%(funcName)s) [%(levelname)s] %(asctime)s | %(message)s"
+    file_handler = logging.FileHandler(filename=f"logs/{logger_filename}.log", mode="a", encoding="utf-8")
+    logging.basicConfig(level=logging.INFO, format=logger_format, handlers=[file_handler])
     return logger
+
+
+def get_parser_logger() -> logging.Logger:
+    return create_logger(logger_filename="wiffy_parser")
+
+
+def get_gui_logger() -> logging.Logger:
+    return create_logger(logger_filename="wiffy_gui")

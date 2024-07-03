@@ -5,7 +5,7 @@ from requests import ConnectionError
 
 from exceptions import TracksNotFoundError
 from utils.counters import count_saved_tracks
-from utils.logger import get_logger
+from utils.logger import get_gui_logger
 from utils.paths import make_download_path
 from wiffy_gui.items.custom import Spinbox
 from wiffy_gui.items.labels import WiffyTextLabel
@@ -13,7 +13,7 @@ from wiffy_gui.items.progressbar import create_progressbar_elements, grid_progre
 from wiffy_parser.download import download_song
 from wiffy_parser.songs_data import make_songs_data_dict
 
-logger = get_logger(__name__)
+logger = get_gui_logger()
 
 
 def download_songs_with_progressbar(

@@ -8,13 +8,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from utils.logger import get_logger
+from utils.logger import get_parser_logger
 from utils.user_data import get_pwd
 from wiffy_parser.html import save_html_in_file
 
 load_dotenv()
 
-logger = get_logger(__name__)
+logger = get_parser_logger()
 
 
 def create_driver() -> WebDriver:

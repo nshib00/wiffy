@@ -6,11 +6,11 @@ from fake_useragent import UserAgent
 from exceptions import TracksNotFoundError
 from utils.counters import calls_counter
 from utils.formatting import format_to_win_path_string
-from utils.logger import get_logger
+from utils.logger import get_parser_logger
 from utils.paths import make_download_path
 from wiffy_parser.songs_data import make_songs_data_dict
 
-logger = get_logger(__name__)
+logger = get_parser_logger()
 
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",

@@ -1,6 +1,6 @@
-from utils.logger import get_logger
+from utils.logger import get_parser_logger
 
-logger = get_logger(__name__)
+logger = get_parser_logger()
 
 
 def make_songs_data_dict(count: int | None = None) -> list[dict]:

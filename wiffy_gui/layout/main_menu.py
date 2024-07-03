@@ -1,10 +1,7 @@
 import customtkinter as ctk
 
-from utils.logger import get_logger
 from wiffy_gui.config import app_settings
 from wiffy_gui.items.buttons import MainMenuButton
-
-logger = get_logger(__name__)
 
 
 def place_main_menu_buttons(buttons: tuple[ctk.CTkButton]) -> None:
