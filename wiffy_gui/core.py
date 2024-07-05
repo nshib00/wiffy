@@ -33,7 +33,7 @@ def configure_main_menu_buttons(
     info_label: WiffyTextLabel,
     content_frame: ctk.CTkFrame,
 ) -> None:
-    tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,))
+    tracks_parsing_thread = Thread(target=start_tracks_parsing, args=(info_label,), daemon=True)
     find_tracks_button, show_tracks_button, download_tracks_button = buttons
 
     find_tracks_button.configure(command=lambda: run_thread(tracks_parsing_thread))

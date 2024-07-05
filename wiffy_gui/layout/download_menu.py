@@ -59,6 +59,7 @@ def draw_download_frame(parent_frame: ctk.CTkFrame, info_label: WiffyTextLabel, 
             download_frame,
             download_frame_widgets["spinbox"],
         ),
+        daemon=True,
     )
     configure_download_frame_widgets(
         df_widgets=download_frame_widgets,
