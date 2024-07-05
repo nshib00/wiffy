@@ -72,11 +72,13 @@ def kissvk_auth(driver: WebDriver) -> None:
 
 
 def close_popup_window(driver: WebDriver) -> None:
-    logger.info(f"Main page title: {driver.title}")
-    if "kissvk" in driver.title.lower():
-        main_window, popup_window = driver.window_handles
-    else:
-        popup_window, main_window = driver.window_handles
+    main_window = driver.current_window_handle
+
+    for handle in driver.window_handles:
+        if handle != main_window:
+            popup_window = handle
+            break
+
     driver.switch_to.window(popup_window)
     driver.close()
     driver.switch_to.window(main_window)
