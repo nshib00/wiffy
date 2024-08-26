@@ -19,11 +19,16 @@ logger = get_parser_logger()
 
 def create_driver() -> WebDriver:
     driver_options = ChromeOptions()
-    # driver_options.add_argument("--headless=new")
-    driver_options.add_extension("D:/projects/wiffy/chromedriver/extensions/AdBlocker-Ultimate.crx")
+    driver_options.add_extension("chromedriver/extensions/AdBlocker-Ultimate.crx")
     driver_service = ChromeService()
     driver = Chrome(options=driver_options, service=driver_service)
-    driver.maximize_window()  # в релизной версии будет заменено на driver.minimize_window()
+
+    if getenv('APP_MODE') == 'DEBUG':
+        driver.maximize_window()
+    else:
+        driver_options.add_argument("--headless=new")
+        driver.minimize_window()
+
     return driver
 
 
