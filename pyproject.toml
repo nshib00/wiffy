@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wiffy"
-version = "0.4.1"
+version = "0.4.2"
 description = "App with GUI for downloading audios from VK."
 authors = ["nshib <nshib54321@gmail.com>"]
 readme = "README.md"
