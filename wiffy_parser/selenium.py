@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
+from exceptions import ExtensionNotFoundError
 from utils.logger import get_parser_logger
 from utils.user_data import get_pwd
 from wiffy_parser.html import save_html_in_file
@@ -19,7 +20,10 @@ logger = get_parser_logger()
 
 def create_driver() -> WebDriver:
     driver_options = ChromeOptions()
-    driver_options.add_extension("chromedriver/extensions/AdBlocker-Ultimate.crx")
+    try:
+        driver_options.add_extension("chromedriver/extensions/AdBlocker-Ultimate.crx")
+    except OSError:
+        raise ExtensionNotFoundError
     driver_service = ChromeService()
     driver = Chrome(options=driver_options, service=driver_service)
 

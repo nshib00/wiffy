@@ -1,6 +1,7 @@
 import requests
 from selenium.common import WebDriverException
 
+from exceptions import ExtensionNotFoundError
 from utils.logger import get_gui_logger
 from wiffy_gui import text
 from wiffy_gui.items.labels import WiffyTextLabel
@@ -26,6 +27,9 @@ def start_tracks_parsing(info_label: WiffyTextLabel) -> None:
             text=text.GENERAL_PARSER_ERROR_MESSAGE,
             text_color="red",
         )
+        logger.error(f"{e.__class__.__name__}: {e}")
+    except ExtensionNotFoundError as e:
+        info_label.configure(text=text.EXTENSION_NOT_FOUND_MESSAGE, text_color="red")
         logger.error(f"{e.__class__.__name__}: {e}")
     except Exception as e:
         info_label.configure(text=f"{text.GENERAL_ERROR_MESSAGE} {e.__class__.__name__}.", text_color="red")
