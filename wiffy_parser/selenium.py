@@ -21,7 +21,7 @@ logger = get_parser_logger()
 def create_driver() -> WebDriver:
     driver_options = ChromeOptions()
     try:
-        driver_options.add_extension("chromedriver/extensions/AdBlocker-Ultimate.crx")
+        driver_options.add_extension("extensions/AdBlocker-Ultimate.crx")
     except OSError:
         raise ExtensionNotFoundError
     driver_service = ChromeService()
