@@ -23,7 +23,7 @@ def create_driver() -> WebDriver:
     driver_service = ChromeService()
     driver = Chrome(options=driver_options, service=driver_service)
 
-    if getenv('APP_MODE') == 'DEBUG':
+    if getenv("APP_MODE") == "DEBUG":
         driver.maximize_window()
     else:
         driver_options.add_argument("--headless=new")
