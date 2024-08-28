@@ -22,9 +22,11 @@
 
 
 ## Скриншоты
-![Главное меню](https://github.com/user-attachments/assets/33b162b5-059d-4ccd-8c58-798f47458591)
-![Список найденных аудиозаписей](https://github.com/user-attachments/assets/d3057bd6-bde7-4dce-989a-9167365a98a7)
-![Меню скачивания аудио](https://github.com/user-attachments/assets/247bd9ab-e5a1-4f96-8246-90f5914f0b91)
+<p align="center">
+<img src="https://github.com/user-attachments/assets/33b162b5-059d-4ccd-8c58-798f47458591">
+<img src="https://github.com/user-attachments/assets/d3057bd6-bde7-4dce-989a-9167365a98a7">
+<img src="https://github.com/user-attachments/assets/247bd9ab-e5a1-4f96-8246-90f5914f0b91">
+</p>
 
 
 ## Как установить (для Windows)
