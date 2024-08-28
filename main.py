@@ -1,17 +1,12 @@
-import os
 from pathlib import Path
 
-from dotenv import load_dotenv
-
+from utils.user_data import save_download_path
 from wiffy_gui.core import start_app
 
 
 def create_files_if_not_exist() -> None:
-    Path(".env").touch()
-    load_dotenv(".env")
-    if os.getenv("DOWNLOAD_PATH") is None:
-        user_downloads_path = Path("~").expanduser() / "Downloads"
-        os.environ["DOWNLOAD_PATH"] = str(user_downloads_path)
+    Path('.env').touch()
+    save_download_path()
     Path("songs_data.txt").touch()
 
 
