@@ -6,7 +6,7 @@ authors = ["nshib <nshib54321@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<3.14"
 selenium = "^4.22.0"
 customtkinter = "^5.2.2"
 requests = "^2.32.3"
@@ -20,6 +20,9 @@ bs4 = "^0.0.2"
 lxml = "^5.2.2"
 pre-commit = "^3.7.1"
 
+
+[tool.poetry.group.dev.dependencies]
+auto-py-to-exe = "^2.44.1"
 
 [build-system]
 requires = ["poetry-core"]
