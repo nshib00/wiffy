@@ -1,4 +1,102 @@
-# Wiffy
-An app with GUI for downloading VK music using https://kissvk.com/. Created with Python and CustomTkinter.
-App has a built-in parser of "KissVK" site that can find tracks, save tracks data to a .txt file and download them (any quantity from 1 to all of saved tracks).
+# ![icon-16](https://github.com/user-attachments/assets/bec151e3-27fb-44a8-82be-6f3bff96d7b4) Wiffy
 
+<p align="center">
+<img src="https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white">
+<img src="https://img.shields.io/badge/selenium-4.22.0-lightgreen?logo=selenium&logoColor=green">
+<img src="https://img.shields.io/badge/code--style-black-black">
+<img src="https://img.shields.io/github/v/release/nshib00/wiffy.svg">
+<img src="https://img.shields.io/github/downloads/nshib00/wiffy/total.svg">
+<img src="https://img.shields.io/github/license/nshib00/wiffy.svg">
+<p>
+
+Приложение для скачивания аудиозаписей с профиля ВК через сайт [kissvk.com.](https://kissvk.com/)
+
+Для парсинга данных с сайта Wiffy использует Selenium и драйвер Chrome.
+
+
+## Возможности
+- Получение данных об аудиозаписях со страницы ВК через kissvk.com (в том числе ссылки для скачивания).
+- Сохранение данных об аудио пользователя в JSON-файле → нет необходимости каждый раз искать аудио заново.
+- Скачивание аудио по ранее собранным ссылкам.
+- Выбор количества аудио для скачивания (от 1 до всех сохраненных).
+
+
+## Скриншоты
+![Главное меню](https://github.com/user-attachments/assets/33b162b5-059d-4ccd-8c58-798f47458591)
+![Список найденных аудиозаписей](https://github.com/user-attachments/assets/d3057bd6-bde7-4dce-989a-9167365a98a7)
+![Меню скачивания аудио](https://github.com/user-attachments/assets/247bd9ab-e5a1-4f96-8246-90f5914f0b91)
+
+
+## Как установить (для Windows)
+
+- [Перейдите на страницу релиза](https://github.com/nshib00/wiffy/releases/latest). Инструкция по скачиванию и необходимые файлы находится там.
+
+_Примечание._ Для корректной работы программы не выносите exe-файл приложения из папки. Создайте ярлык файла в удобном для вас месте.
+
+## Как запустить через Python
+
+
+Программа использует инструмент для управления зависимости **Poetry** вместо pip. 
+
+_Если Poetry нет на вашем компьютере, установите через pip:_
+```
+pip install poetry
+```
+
+Выполните в консоли:
+
+```
+git clone https://github.com/nshib00/wiffy.git
+cd wiffy
+poetry shell
+poetry install --no-root
+```
+
+Далее необходимо скачать расширение **Adblocker Ultimate** для браузера Chrome. Оно необходимо для блокировки рекламных окон при парсинге.
+Скачать можно из релизов проекта [по ссылке](https://github.com/nshib00/wiffy/releases/download/v0.4.3/extensions.zip) или с помощью утилиты `curl`:
+```
+curl -L -O https://github.com/nshib00/wiffy/releases/download/v0.4.3/extensions.zip
+```
+Распакуйте zip-архив в корень проекта, должна появиться папка `extensions` с файлом `Adblocker-Ultimate.crx`.
+
+Затем из корня проекта запустите главный файл приложения:
+```
+python main.py
+```
+При запуске в первый раз может быть установлен движок браузера Chrome. Это необходимо для работы библиотеки Selenium.
+
+
+## Основные используемые библиотеки
+
+- **Selenium** - парсинг страниц с аудиозаписями.
+- **BeautifulSoup** - парсинг собранного контента в формате HTML.
+- **Requests** - скачивание найденных аудиозаписей.
+- **CustomTkinter** - графический интерфейс.
+- **Black**, **isort**, **flake8** - стилизация и форматирование кода.
+  
+
+## Примечания
+
+- При скачивании треков (после авторизации парсером на kissvk) **в ВК придет уведомление о входе в аккаунт**. Это нормально, поскольку для доступа к трекам через kissvk необходима авторизация через ВК. Авторизация выполняется парсером автоматически.
+- **Не рекомендуется** выполнять поиск треков **много раз подряд**, так как ВК может посчитать подобную активность подозрительной. Возможна блокировка авторизации на kissvk на несколько часов.
+- Ссылки на треки действуют некоторое время (до нескольких дней), поэтому если список треков не требуется обновлять, то пользуйтесь списком уже сохраненных треков.
+- Если будут возникать ошибки при скачивании треков, запустите парсер снова (кнопка "Найти треки из ВК"). Так обновится список сохраненных треков и ссылки на все аудиозаписи.
+
+
+## Решение возможных проблем
+
+1. Если при первом запуске возникает данная ошибка:
+```
+FileNotFoundError: [Errno 2] No such file or directory: ''
+```
+то программа не увидела файл `.env`. Если файл появился в проекте при первом запуске, перезапустите приложение. Если нет, создайте файл `.env` вручную в корне проекта.
+
+2. Если парсер не может вставить ваш номер телефона / email в форму авторизации, пропишите в файле `.env`
+следующий параметр:
+```
+VK_LOGIN=<номер телефона или email, привязанный к ВК>
+```
+
+## Лицензия
+
+В проекте используется лицензия [MIT](https://github.com/nshib00/wiffy/blob/main/LICENSE).
