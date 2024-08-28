@@ -6,7 +6,7 @@ authors = ["nshib <nshib54321@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 selenium = "^4.22.0"
 customtkinter = "^5.2.2"
 requests = "^2.32.3"
