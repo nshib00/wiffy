@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from chrome_extension_python import Extension
 
 from exceptions import ExtensionNotFoundError
 from utils.logger import get_parser_logger
@@ -21,8 +22,11 @@ logger = get_parser_logger()
 def create_driver() -> WebDriver:
     driver_options = ChromeOptions()
     try:
-        driver_options.add_extension("extensions/AdBlocker-Ultimate.crx")
-    except OSError:
+        adblock_url = r"https://chromewebstore.google.com/detail/adblocker-ultimate/ohahllgiabjaoigichmmfljhkcfikeof"
+        adblock_extension = Extension(adblock_url).load() 
+        driver_options.add_argument(adblock_extension)
+    except OSError as e:
+        logger.error(f"Error in driver creation: {e.__class__.__name__}: {e}")
         raise ExtensionNotFoundError
     driver_service = ChromeService()
     driver = Chrome(options=driver_options, service=driver_service)
@@ -31,6 +35,7 @@ def create_driver() -> WebDriver:
         driver.maximize_window()
     else:
         driver_options.add_argument("--headless=new")
+        driver_options.add_argument("--no-sandbox")
         driver.minimize_window()
 
     return driver
@@ -72,7 +77,7 @@ def kissvk_auth(driver: WebDriver) -> None:
     auth_btn.click()
     login_input = wait.until(EC.presence_of_element_located((By.NAME, "login")))
     login_input.clear()
-    login_input.send_keys(getenv("VK_LOGIN"))
+    login_input.send_keys(getenv("VK_LOGIN")[2:])
     login_input.send_keys(Keys.ENTER)
     pwd_input = wait.until(EC.presence_of_element_located((By.NAME, "password")))
     pwd_input.clear()

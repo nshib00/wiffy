@@ -7,7 +7,7 @@ def configure_dir_label(dir_label: ctk.CTkLabel, new_path: str | None = None) ->
     if new_path is None:
         label_text = dir_label.cget("text")
         if len(label_text) > 50:
-            dir_label.configure(text=label_text[:50] + "...")
+            dir_label.configure(text=f"{label_text[:50]}...")
     else:
         if new_path:
             if len(new_path) <= 50:

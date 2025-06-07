@@ -19,6 +19,8 @@ fake-useragent = "^1.5.1"
 bs4 = "^0.0.2"
 lxml = "^5.2.2"
 pre-commit = "^3.7.1"
+poetry-plugin-shell = "^1.0.1"
+chrome-extension-python = "^1.0.4"
 
 
 [tool.poetry.group.dev.dependencies]
